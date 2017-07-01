@@ -8,6 +8,7 @@
 #include <TTree.h>
 #include <TFile.h>
 #include <TClass.h>
+#include <Compression.h>
 
 #include "ramrecord.h"
 
@@ -27,15 +28,19 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
    TObjArray *toks;
    TObjString *s;
 
-   // open ROOT file and define TTree
+   // open ROOT file
    auto f = TFile::Open(treefile, "RECREATE");
+   f->SetCompressionLevel(9);     // 0 - no compression, 1..9 - min to max compression
+   f->SetCompressionAlgorithm(ROOT::kLZMA);  // ROOT::kZLIB, ROOT::kLZMA, ROOT::kLZ4
+
+   // create the TTree
    auto tree = new TTree("SAM", datafile);
 
    // create a branch for a RAMRecord
    // don't stream TObject info, but still nice to have a TObject derived class
    auto *r = new RAMRecord;
    RAMRecord::Class()->IgnoreTObjectStreamer();
-   tree->Branch("RAMRecord", &r);
+   tree->Branch("RAMRecord", &r, 64000, 1);
 
    nlines = 0;
 
