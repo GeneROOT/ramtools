@@ -70,45 +70,38 @@ void RAMRecord::SetSEQ(const TString &seq)
    // the space compared to an ASCII string as the allowed character set is limited
    // (fits in 4 instead of 8 bits).
 
-   static TString seqcode = "=ACMGRSVTWYHKDBN";
-   static bool mapfilled = false;
-   static map<char,UChar_t> seqmap;
-   if (!mapfilled) {
-      for (int i = 0; i < seqcode.Length(); i++)
-         seqmap[seqcode[i]] = i;
-      mapfilled = true;
+   static const char *codetoseq = "=ACMGRSVTWYHKDBN";
+   static UChar_t seqtocode[256];
+   static bool init = false;
+   if (!init) {
+      memset(seqtocode, 0, 256);
+      for (int i = 1; i < 16; i++) {
+         seqtocode[codetoseq[i]] = i;
+      }
+      init = true;
    }
 
    static Int_t maxlseq2 = 0;
    v_lseq = seq.Length();
-   Int_t newlseq2 = (v_lseq + 1)/2;
+   v_lseq2 = (v_lseq + 1)/2;
 
-   if (newlseq2 > maxlseq2) {
+   if (v_lseq2 > maxlseq2) {
       delete [] v_seq;
       v_seq = nullptr;
    }
 
-   if (v_seq == nullptr && newlseq2) {
-      v_lseq2 = newlseq2;
+   if (v_seq == nullptr && v_lseq2) {
       maxlseq2 = v_lseq2;
       v_seq = new UChar_t[v_lseq2];
-   } else {
-      v_lseq2 = newlseq2;
    }
 
-   for (int i = 0; i < v_lseq2; i++) {
-      char c = seq[2*i];
-      if (!seqcode.Contains(c))
-         c = 'N';
-      UChar_t nib1 = seqmap[c];
-      UChar_t nib2 = 0;
-      if (2*i+1 < v_lseq) {
-         c = seq[2*i+1];
-         if (!seqcode.Contains(c))
-            c = 'N';
-         nib2 = seqmap[c];
-      }
-      v_seq[i] = nib1 << 4 | nib2;
+   int j = 0;
+   for (int i = 0; i + 1 < v_lseq; i += 2) {
+      v_seq[j] = (seqtocode[seq[i]] << 4) | seqtocode[seq[i+1]];
+      j++;
+   }
+   if (v_lseq % 2) {
+      v_seq[j] = seqtocode[seq[v_lseq-1]] << 4;
    }
 }
 
@@ -116,25 +109,41 @@ const TString &RAMRecord::GetSEQ() const
 {
    // Decode segment SEQuence from BAM like encoded format. See SetSEQ().
 
-   static TString seqcode = "=ACMGRSVTWYHKDBN";
-   static bool mapfilled = false;
-   static map<UChar_t,char> seqmap;
-   if (!mapfilled) {
-      for (int i = 0; i < seqcode.Length(); i++)
-         seqmap[i] = seqcode[i];
-      mapfilled = true;
-   }
-
-   static TString seq;
-   seq = "";
-   for (int i = 0; i < v_lseq2; i++) {
-      UChar_t nib = v_seq[i] >> 4;
-      seq += seqmap[nib];
-      if (2*i+1 < v_lseq) {
-         nib = v_seq[i] & 0xf;
-         seq += seqmap[nib];
+   static const char *codetoseq = "=ACMGRSVTWYHKDBN";
+   static UShort_t codetoseqpair[256];
+   static bool init = false;
+   if (!init) {
+      for (int i = 0; i < 256; i++) {
+         codetoseqpair[i] = (codetoseq[i >> 4]) | (codetoseq[i & 0xf] << 8);
       }
+      init = true;
    }
 
-   return seq;
+   static int maxlseq = 0;
+   static char *seq = nullptr;
+
+   if (v_lseq > maxlseq) {
+      delete [] seq;
+      seq = nullptr;
+   }
+
+   if (seq == nullptr && v_lseq) {
+      maxlseq = v_lseq;
+      seq = new char[v_lseq+1];
+      seq[v_lseq] = '\0';
+   }
+
+   UShort_t *seqpairs = (UShort_t*) seq;
+   int pairs = v_lseq / 2;
+   for (int i = 0; i < pairs; i++) {
+      seqpairs[i] = codetoseqpair[v_seq[i]];
+   }
+   if (v_lseq % 2) {
+      seq[v_lseq-1] = codetoseq[v_seq[v_lseq / 2] >> 4];
+   }
+
+   static TString seqstr;
+   seqstr = seq;
+
+   return seqstr;
 }
