@@ -18,10 +18,22 @@ void ramreader(const char *file = "ramexample.root")
 
    t->SetBranchAddress("RAMRecord", &r);
 
+   printf("The file contains %lld RAMRecords\n\n", t->GetEntries());
+
+   // access sequentially first 10 records
+   printf("Sequentially access the first 10 records from the file:\n");
    for (int i = 0; i < 10; i++) {
       t->GetEvent(i);
-      printf("%2d SEQ: %s\n", i, r->GetSEQ().Data());
+      printf("%2d SEQ:  %s\n", i, r->GetSEQ().Data());
+      printf("%2d QUAL: %s\n", i, r->GetQUAL().Data());
+   }
+
+   // Randomly access 10 records
+   printf("\nRandomly access 10 records from the file:\n");
+   for (int i = 0; i < 10; i++) {
+      int n = gRandom->Rndm()*1000.;
+      t->GetEvent(n);
+      printf("%2d SEQ:  %s\n", n, r->GetSEQ().Data());
+      printf("%2d QUAL: %s\n", n, r->GetQUAL().Data());
    }
 }
-
-
