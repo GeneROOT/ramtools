@@ -23,7 +23,7 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
       return;
    }
 
-   int coln, nlines, i;
+   int coln, nlines, nrecords, i;
    TString line;
    TObjArray *toks;
    TObjString *s;
@@ -43,6 +43,7 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
    tree->Branch("RAMRecord", &r, 64000, 1);
 
    nlines = 0;
+   nrecords = 0;
 
    while (line.Gets(fp)) {
 
@@ -72,13 +73,7 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
          // flag
          s = (TObjString *) toks->At(1);
-         if (s->String().IsDigit())
-            r->SetFLAG(s->String().Atoi());
-         else {
-            if (repBadData)
-               printf("[%d,2]: does not look like integer [%s]\n", nlines, s->GetName());
-            r->SetFLAG(0);
-         }
+         r->SetFLAG(s->String().Atoi());
 
          // rname
          s = (TObjString *) toks->At(2);
@@ -86,23 +81,11 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
          // pos
          s = (TObjString *) toks->At(3);
-         if (s->String().IsDigit())
-            r->SetPOS(s->String().Atoi());
-         else {
-            if (repBadData)
-               printf("[%d,2]: does not look like integer [%s]\n", nlines, s->GetName());
-            r->SetPOS(0);
-         }
+         r->SetPOS(s->String().Atoi());
 
          // mapq
          s = (TObjString *) toks->At(4);
-         if (s->String().IsDigit())
-            r->SetMAPQ(s->String().Atoi());
-         else {
-            if (repBadData)
-               printf("[%d,2]: does not look like integer [%s]\n", nlines, s->GetName());
-            r->SetMAPQ(0);
-         }
+         r->SetMAPQ(s->String().Atoi());
 
          // cigar
          s = (TObjString *) toks->At(5);
@@ -114,23 +97,11 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
          // pnext
          s = (TObjString *) toks->At(7);
-         if (s->String().IsDigit())
-            r->SetPNEXT(s->String().Atoi());
-         else {
-            if (repBadData)
-               printf("[%d,2]: does not look like integer [%s]\n", nlines, s->GetName());
-            r->SetPNEXT(0);
-         }
+         r->SetPNEXT(s->String().Atoi());
 
          // tlen
          s = (TObjString *) toks->At(8);
-         if (s->String().IsDigit())
-            r->SetTLEN(s->String().Atoi());
-         else {
-            if (repBadData)
-               printf("[%d,2]: does not look like integer [%s]\n", nlines, s->GetName());
-            r->SetTLEN(0);
-         }
+         r->SetTLEN(s->String().Atoi());
 
          // seq
          s = (TObjString *) toks->At(9);
@@ -148,8 +119,8 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
                r->SetOPT(s->String(), i);
             }
          }
-
          tree->Fill();
+         nrecords++;
       }
       nlines++;
       delete toks;
@@ -159,4 +130,6 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
    fclose(fp);
    delete f;
+
+   printf("\nProcessed %d SAM records\n", nrecords);
 }
