@@ -30,7 +30,7 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
    // open ROOT file
    auto f = TFile::Open(treefile, "RECREATE");
-   f->SetCompressionLevel(9);     // 0 - no compression, 1..9 - min to max compression
+   f->SetCompressionLevel(1);     // 0 - no compression, 1..9 - min to max compression
    f->SetCompressionAlgorithm(ROOT::kLZMA);  // ROOT::kZLIB, ROOT::kLZMA, ROOT::kLZ4
 
    // create the TTree
