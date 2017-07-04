@@ -12,7 +12,7 @@
 void ramreader(const char *file = "ramexample.root")
 {
    auto f = TFile::Open(file);
-   auto t = (TTree*) f->Get("SAM");
+   auto t = (TTree*) f->Get("RAM");
 
    RAMRecord *r = new RAMRecord;
 
@@ -24,8 +24,9 @@ void ramreader(const char *file = "ramexample.root")
    printf("Sequentially access the first 10 records from the file:\n");
    for (int i = 0; i < 10; i++) {
       t->GetEvent(i);
-      printf("%2d SEQ:  %s\n", i, r->GetSEQ().Data());
-      printf("%2d QUAL: %s\n", i, r->GetQUAL().Data());
+      printf("%2d QNAME: %s\n", i, r->GetQNAME());
+      printf("%2d SEQ:   %s\n", i, r->GetSEQ());
+      printf("%2d QUAL:  %s\n", i, r->GetQUAL());
    }
 
    // Randomly access 10 records
@@ -33,7 +34,7 @@ void ramreader(const char *file = "ramexample.root")
    for (int i = 0; i < 10; i++) {
       int n = gRandom->Rndm()*1000.;
       t->GetEvent(n);
-      printf("%2d SEQ:  %s\n", n, r->GetSEQ().Data());
-      printf("%2d QUAL: %s\n", n, r->GetQUAL().Data());
+      printf("%2d SEQ:  %s\n", n, r->GetSEQ());
+      printf("%2d QUAL: %s\n", n, r->GetQUAL());
    }
 }
