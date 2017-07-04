@@ -23,18 +23,13 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
       return;
    }
 
-   int coln, nlines, nrecords, i;
-   TString line;
-   TObjArray *toks;
-   TObjString *s;
-
    // open ROOT file
    auto f = TFile::Open(treefile, "RECREATE");
    f->SetCompressionLevel(1);     // 0 - no compression, 1..9 - min to max compression
    f->SetCompressionAlgorithm(ROOT::kLZMA);  // ROOT::kZLIB, ROOT::kLZMA, ROOT::kLZ4
 
    // create the TTree
-   auto tree = new TTree("SAM", datafile);
+   auto tree = new TTree("RAM", datafile);
 
    // create a branch for a RAMRecord
    // don't stream TObject info, but still nice to have a TObject derived class
@@ -42,88 +37,99 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
    RAMRecord::Class()->IgnoreTObjectStreamer();
    tree->Branch("RAMRecord", &r, 64000, 1);
 
-   nlines = 0;
-   nrecords = 0;
+   int nlines = 0;
+   int nrecords = 0;
 
-   while (line.Gets(fp)) {
+   const int maxl = 10240;
+   char line[maxl];
+   while (fgets(line, maxl, fp)) {
 
-      toks = line.Tokenize("\t");
-      coln = toks->GetEntriesFast();
+      bool header = false;
+      int ntok = 0;
+      char *tok;
+      while ((tok = strtok(ntok ? 0 : line, "\t"))) {
 
-      if (line[0] == '@') {
-         // skip header lines for the time being
+         if ((ntok == 0 && tok[0] == '@') || header) {
+            // skip header lines for the time being
 
-         // Create header objects
+            // Create header objects
+            header = true;
+            break;
 
-      } else {
-         if (coln < RAMRecord::mincol) {
-            printf("[%d]: error -- %d data values read instead of %d\n",
-                   nlines, coln, RAMRecord::mincol);
-            continue;
-         }
-         if (coln > RAMRecord::maxcol) {
-            printf("[%d]: warning -- %d data values read, %d value(s) truncated\n",
-                   nlines, coln, coln - RAMRecord::maxcol);
-            coln = RAMRecord::maxcol;
-         }
+         } else {
 
-         // qname
-         s = (TObjString *) toks->At(0);
-         r->SetQNAME(s->String());
+            // qname
+            if (ntok == 0)
+               r->SetQNAME(tok);
 
-         // flag
-         s = (TObjString *) toks->At(1);
-         r->SetFLAG(s->String().Atoi());
+            // flag
+            if (ntok == 1)
+               r->SetFLAG(atoi(tok));
 
-         // rname
-         s = (TObjString *) toks->At(2);
-         r->SetRNAME(s->String());
+            // rname
+            if (ntok == 2)
+               r->SetRNAME(tok);
 
-         // pos
-         s = (TObjString *) toks->At(3);
-         r->SetPOS(s->String().Atoi());
+            // pos
+            if (ntok == 3)
+               r->SetPOS(atoi(tok));
 
-         // mapq
-         s = (TObjString *) toks->At(4);
-         r->SetMAPQ(s->String().Atoi());
+            // mapq
+            if (ntok == 4)
+               r->SetMAPQ(atoi(tok));
 
-         // cigar
-         s = (TObjString *) toks->At(5);
-         r->SetCIGAR(s->String());
+            // cigar
+            if (ntok == 5)
+               r->SetCIGAR(tok);
 
-         // rnext
-         s = (TObjString *) toks->At(6);
-         r->SetRNEXT(s->String());
+            // rnext
+            if (ntok == 6)
+               r->SetRNEXT(tok);
 
-         // pnext
-         s = (TObjString *) toks->At(7);
-         r->SetPNEXT(s->String().Atoi());
+            // pnext
+            if (ntok == 7)
+               r->SetPNEXT(atoi(tok));
 
-         // tlen
-         s = (TObjString *) toks->At(8);
-         r->SetTLEN(s->String().Atoi());
+            // tlen
+            if (ntok == 8)
+               r->SetTLEN(atoi(tok));
 
-         // seq
-         s = (TObjString *) toks->At(9);
-         r->SetSEQ(s->String());
+            // seq
+            if (ntok == 9)
+               r->SetSEQ(tok);
 
-         // qual
-         s = (TObjString *) toks->At(10);
-         r->SetQUAL(s->String());
+            // qual
+            if (ntok == 10) {
+               r->SetQUAL(tok);
+               for (int i = 0; i < RAMRecord::nopt; i++)
+                  r->SetOPT("", i);
+            }
 
-         // opt's
-         for (i = 0; i < RAMRecord::nopt; i++) {
-            r->SetOPT("", i);
-            if (coln >= RAMRecord::mincol+i+1) {
-               s = (TObjString *) toks->At(RAMRecord::mincol+i);
-               r->SetOPT(s->String(), i);
+            // opt's
+            if (ntok >= 11) {
+               if (ntok-11 < RAMRecord::nopt)
+                  r->SetOPT(tok, ntok-11);
             }
          }
-         tree->Fill();
+         ntok++;
+      }
+
+      if (ntok < RAMRecord::mincol && !header) {
+         printf("[%d]: error -- %d data values read instead of %d\n",
+                nlines, ntok, RAMRecord::mincol);
+         // skip record
+         continue;
+      }
+      if (ntok > RAMRecord::maxcol && !header) {
+         printf("[%d]: warning -- %d data values read, %d value(s) truncated\n",
+                nlines, ntok, ntok - RAMRecord::maxcol);
+      }
+
+      if (!header) {
          nrecords++;
+         tree->Fill();
       }
       nlines++;
-      delete toks;
    }
    tree->Print();
    tree->Write();
