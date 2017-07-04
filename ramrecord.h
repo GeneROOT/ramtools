@@ -35,36 +35,36 @@ public:
                  v_lseq2(0), v_seq(nullptr) { }
    virtual ~RAMRecord() { delete [] v_seq; v_seq = nullptr; }
 
-   void SetQNAME(const TString &qname) { v_qname = qname; }
+   void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
-   void SetRNAME(const TString &rname) { v_rname = rname; }
+   void SetRNAME(const char *rname) { v_rname = rname; }
    void SetPOS(UInt_t pos) { v_pos = pos; }
    void SetMAPQ(UChar_t mapq) { v_mapq = mapq; }
-   void SetCIGAR(const TString &cigar) { v_cigar = cigar; }
-   void SetRNEXT(const TString &rnext) { v_rnext = rnext; }
+   void SetCIGAR(const char *cigar) { v_cigar = cigar; }
+   void SetRNEXT(const char *rnext) { v_rnext = rnext; }
    void SetPNEXT(UInt_t pnext) { v_pnext = pnext; }
    void SetTLEN(Int_t tlen) { v_tlen = tlen; }
-   void SetSEQ(const TString &seq);
-   void SetQUAL(const TString &qual) { v_qual = qual; }
-   void SetOPT(const TString &opt, Int_t idx) { v_opt[idx] = opt; }
+   void SetSEQ(const char *seq);
+   void SetQUAL(const char *qual) { v_qual = qual; }
+   void SetOPT(const char *opt, Int_t idx) { v_opt[idx] = opt; }
 
-   const TString &GetQNAME() const { return v_qname; }
-   UInt_t         GetFLAG() const { return v_flag; }
-   const TString &GetRNAME() const { return v_rname; }
-   UInt_t         GetPOS() const { return v_pos; }
-   UInt_t         GetMAPQ() const { return v_mapq; }
-   const TString &GetCIGAR() const { return v_cigar; }
-   const TString &GetRNEXT() const { return v_rnext; }
-   UInt_t         GetPNEXT() const { return v_pnext; }
-   Int_t          GetTLEN() const { return v_tlen; }
-   const TString &GetSEQ() const;
-   const TString &GetQUAL() const { return v_qual; }
-   const TString &GetOPT(Int_t idx) const { return v_opt[idx]; }
+   const char *GetQNAME() const { return v_qname; }
+   UInt_t      GetFLAG() const { return v_flag; }
+   const char *GetRNAME() const { return v_rname; }
+   UInt_t      GetPOS() const { return v_pos; }
+   UInt_t      GetMAPQ() const { return v_mapq; }
+   const char *GetCIGAR() const { return v_cigar; }
+   const char *GetRNEXT() const { return v_rnext; }
+   UInt_t      GetPNEXT() const { return v_pnext; }
+   Int_t       GetTLEN() const { return v_tlen; }
+   const char *GetSEQ() const;
+   const char *GetQUAL() const { return v_qual; }
+   const char *GetOPT(Int_t idx) const { return v_opt[idx]; }
 
    ClassDef(RAMRecord,1)
 };
 
-void RAMRecord::SetSEQ(const TString &seq)
+void RAMRecord::SetSEQ(const char *seq)
 {
    // Use BAM like encoding for the segment SEQuence. This uses about half
    // the space compared to an ASCII string as the allowed character set is limited
@@ -82,7 +82,7 @@ void RAMRecord::SetSEQ(const TString &seq)
    }
 
    static Int_t maxlseq2 = 0;
-   v_lseq = seq.Length();
+   v_lseq = strlen(seq);
    v_lseq2 = (v_lseq + 1)/2;
 
    if (v_lseq2 > maxlseq2) {
@@ -105,7 +105,7 @@ void RAMRecord::SetSEQ(const TString &seq)
    }
 }
 
-const TString &RAMRecord::GetSEQ() const
+const char *RAMRecord::GetSEQ() const
 {
    // Decode segment SEQuence from BAM like encoded format. See SetSEQ().
 
@@ -142,8 +142,5 @@ const TString &RAMRecord::GetSEQ() const
       seq[v_lseq-1] = codetoseq[v_seq[v_lseq / 2] >> 4];
    }
 
-   static TString seqstr;
-   seqstr = seq;
-
-   return seqstr;
+   return seq;
 }
