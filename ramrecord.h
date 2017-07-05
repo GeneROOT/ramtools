@@ -10,6 +10,7 @@
 
 #include <TObject.h>
 #include <TString.h>
+#include <iostream>
 
 
 class RAMRecord : public TObject {
@@ -36,6 +37,8 @@ private:
 public:
    RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_pnext(0), v_tlen(0), v_lseq(0),
                  v_lseq2(0), v_seq(nullptr) { }
+   RAMRecord(const RAMRecord &rec);
+   RAMRecord &operator=(const RAMRecord &rhs);
    virtual ~RAMRecord() { delete [] v_seq; v_seq = nullptr; }
 
    void SetQNAME(const char *qname) { v_qname = qname; }
@@ -64,9 +67,68 @@ public:
    const char *GetQUAL() const { return v_qual; }
    const char *GetOPT(Int_t idx) const { return v_opt[idx]; }
 
+   void        Print(Option_t *option="") const;
+
    ClassDef(RAMRecord,1)
 };
 
+inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
+{
+   // RAMRecord copy ctor.
+
+   v_qname = rec.v_qname;
+   v_flag  = rec.v_flag;
+   v_rname = rec.v_rname;
+   v_pos   = rec.v_pos;
+   v_mapq  = rec.v_mapq;
+   v_cigar = rec.v_cigar;
+   v_rnext = rec.v_rnext;
+   v_pnext = rec.v_pnext;
+   v_tlen  = rec.v_tlen;
+   v_lseq  = rec.v_lseq;
+   v_lseq2 = rec.v_lseq2;
+   if (rec.v_seq != nullptr) {
+      v_seq = new UChar_t[v_lseq2];
+      for (int i = 0; i < v_lseq2; i++)
+         v_seq[i] = rec.v_seq[i];
+   } else
+      v_seq = rec.v_seq;
+   v_qual  = rec.v_qual;
+   for (int i = 0; i < nopt; i++)
+      v_opt[i] = rec.v_opt[i];
+}
+
+inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
+{
+   // RAMRecord assignment operator.
+
+   if (this != &rhs) {
+      TObject::operator=(rhs);
+      v_qname = rhs.v_qname;
+      v_flag  = rhs.v_flag;
+      v_rname = rhs.v_rname;
+      v_pos   = rhs.v_pos;
+      v_mapq  = rhs.v_mapq;
+      v_cigar = rhs.v_cigar;
+      v_rnext = rhs.v_rnext;
+      v_pnext = rhs.v_pnext;
+      v_tlen  = rhs.v_tlen;
+      v_lseq  = rhs.v_lseq;
+      v_lseq2 = rhs.v_lseq2;
+      if (v_seq != nullptr)
+         delete [] v_seq;
+      if (rhs.v_seq != nullptr) {
+         v_seq = new UChar_t[v_lseq2];
+         for (int i = 0; i < v_lseq2; i++)
+            v_seq[i] = rhs.v_seq[i];
+      } else
+         v_seq = rhs.v_seq;
+      v_qual  = rhs.v_qual;
+      for (int i = 0; i < nopt; i++)
+         v_opt[i] = rhs.v_opt[i];
+   }
+   return *this;
+}
 
 inline void RAMRecord::SetSEQ(const char *seq)
 {
@@ -148,6 +210,19 @@ inline const char *RAMRecord::GetSEQ() const
    }
 
    return seq;
+}
+
+inline void RAMRecord::Print(Option_t *) const
+{
+   // Print a single record, in SAM format.
+
+   std::cout << GetQNAME() << "\t" << GetFLAG() << "\t" << GetRNAME() << "\t"
+             << GetPOS() << "\t" << GetMAPQ() << "\t" << GetCIGAR() << "\t"
+             << GetRNEXT() << "\t" << GetPNEXT() << "\t" << GetTLEN() << "\t"
+             << GetSEQ() << "\t" << GetQUAL();
+   for (int i = 0; i < nopt; i++)
+      std::cout << "\t" << GetOPT(i);
+   std::cout << endl;
 }
 
 #ifdef __ROOTCLING__
