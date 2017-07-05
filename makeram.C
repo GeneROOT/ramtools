@@ -14,8 +14,7 @@
 
 
 
-void makeram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
-             Bool_t repBadData = kTRUE)
+void makeram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root")
 {
    FILE *fp = fopen(datafile, "r");
    if (!fp) {
