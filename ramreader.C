@@ -6,6 +6,7 @@
 
 #include <TFile.h>
 #include <TTree.h>
+#include <TRandom.h>
 
 #include "ramrecord.h"
 
