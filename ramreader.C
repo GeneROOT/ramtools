@@ -29,6 +29,9 @@ void ramreader(const char *file = "ramexample.root")
       printf("%2d QUAL:  %s\n", i, r->GetQUAL());
    }
 
+   printf("\nFull print of last RAMRecord:\n");
+   r->Print();
+
    // Randomly access 10 records
    printf("\nRandomly access 10 records from the file:\n");
    for (int i = 0; i < 10; i++) {
@@ -37,4 +40,8 @@ void ramreader(const char *file = "ramexample.root")
       printf("%2d SEQ:  %s\n", n, r->GetSEQ());
       printf("%2d QUAL: %s\n", n, r->GetQUAL());
    }
+
+   RAMRecord r2 = *r;
+   printf("\nFull print of copied last RAMRecord:\n");
+   r2.Print();
 }
