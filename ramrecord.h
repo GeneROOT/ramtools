@@ -5,6 +5,9 @@
 // Author: Fons Rademakers, 29/6/2017
 //
 
+#ifndef RAMRecord_h
+#define RAMRecord_h
+
 #include <TObject.h>
 #include <TString.h>
 
@@ -64,7 +67,8 @@ public:
    ClassDef(RAMRecord,1)
 };
 
-void RAMRecord::SetSEQ(const char *seq)
+
+inline void RAMRecord::SetSEQ(const char *seq)
 {
    // Use BAM like encoding for the segment SEQuence. This uses about half
    // the space compared to an ASCII string as the allowed character set is limited
@@ -105,7 +109,8 @@ void RAMRecord::SetSEQ(const char *seq)
    }
 }
 
-const char *RAMRecord::GetSEQ() const
+
+inline const char *RAMRecord::GetSEQ() const
 {
    // Decode segment SEQuence from BAM like encoded format. See SetSEQ().
 
@@ -144,3 +149,10 @@ const char *RAMRecord::GetSEQ() const
 
    return seq;
 }
+
+#ifdef __ROOTCLING__
+#pragma link C++ class RAMRecord+;
+#endif
+
+#endif
+
