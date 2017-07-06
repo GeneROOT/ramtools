@@ -15,11 +15,17 @@ void ramreader(const char *file = "ramexample.root")
    auto f = TFile::Open(file);
    auto t = (TTree*) f->Get("RAM");
 
-   RAMRecord *r = new RAMRecord;
+   RAMRecord *r = 0;;
 
-   t->SetBranchAddress("RAMRecord", &r);
+   t->SetBranchAddress("RAMRecord.", &r);
 
    printf("The file contains %lld RAMRecords\n\n", t->GetEntries());
+
+   t->SetBranchStatus("RAMRecord.*", 0);
+   t->SetBranchStatus("RAMRecord.v_qname", 1);
+   t->SetBranchStatus("RAMRecord.v_lseq", 1);
+   t->SetBranchStatus("RAMRecord.v_seq", 1);
+   t->SetBranchStatus("RAMRecord.v_qual", 1);
 
    // access sequentially first 10 records
    printf("Sequentially access the first 10 records from the file:\n");
@@ -30,8 +36,11 @@ void ramreader(const char *file = "ramexample.root")
       printf("%2d QUAL:  %s\n", i, r->GetQUAL());
    }
 
-   printf("\nFull print of last RAMRecord:\n");
+   printf("\nFull print of RAMRecord 10:\n");
    r->Print();
+
+   // no need anymore for QNAME
+   t->SetBranchStatus("RAMRecord.v_qname", 0);
 
    // Randomly access 10 records
    printf("\nRandomly access 10 records from the file:\n");
@@ -41,6 +50,10 @@ void ramreader(const char *file = "ramexample.root")
       printf("%2d SEQ:  %s\n", n, r->GetSEQ());
       printf("%2d QUAL: %s\n", n, r->GetQUAL());
    }
+
+   // Get full last RAMRecord, turn on all branches
+   t->SetBranchStatus("RAMRecord.*", 1);
+   t->GetEvent(t->GetEntries()-1);
 
    RAMRecord r2 = *r;
    printf("\nFull print of copied last RAMRecord:\n");
