@@ -224,6 +224,10 @@ inline const char *RAMRecord::GetSEQ() const
    static int maxlseq = 0;
    static char *seq = nullptr;
 
+   // in case column v_seq is not read
+   if (!v_seq)
+      return "";
+
    if (v_lseq > maxlseq) {
       delete [] seq;
       seq = nullptr;
@@ -322,6 +326,10 @@ inline const char *RAMRecord::GetCIGAR() const
    // Rebuild the CIGAR string.
 
    static char cigar[1024];
+
+   // in case column v_cigar is not read
+   if (!v_cigar)
+      return "";
 
    int l = 0;
    for (int i = 0; i < v_ncigar_op; i++) {
