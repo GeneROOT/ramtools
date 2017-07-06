@@ -34,7 +34,7 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
    // don't stream TObject info, but still nice to have a TObject derived class
    auto *r = new RAMRecord;
    RAMRecord::Class()->IgnoreTObjectStreamer();
-   tree->Branch("RAMRecord", &r, 64000, 1);
+   tree->Branch("RAMRecord.", &r, 64000, 1);
 
    int nlines = 0;
    int nrecords = 0;
