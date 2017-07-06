@@ -24,7 +24,8 @@ private:
    TString         v_rname;               // Reference sequence NAME
    UInt_t          v_pos;                 // 1-based left most mapping POSition
    UChar_t         v_mapq;                // MAPing Quality
-   TString         v_cigar;               // CIGAR string
+   Int_t           v_ncigar_op;           // Number of CIGAR operands
+   UInt_t         *v_cigar;               //[v_ncigar_op] (op_len<<4|op. "MIDNSHP=X" -> "012345678")
    TString         v_rnext;               // Reference name of the mate/next read
    UInt_t          v_pnext;               // Position of the mate/next read
    Int_t           v_tlen;                // Observed Template LENgth
@@ -35,18 +36,19 @@ private:
    TString         v_opt[nopt];           // Optional fields
 
 public:
-   RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_pnext(0), v_tlen(0), v_lseq(0),
+   RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
+                 v_pnext(0), v_tlen(0), v_lseq(0),
                  v_lseq2(0), v_seq(nullptr) { }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
-   virtual ~RAMRecord() { delete [] v_seq; v_seq = nullptr; }
+   virtual ~RAMRecord() { delete [] v_cigar; v_cigar = nullptr; delete [] v_seq; v_seq = nullptr; }
 
    void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
    void SetRNAME(const char *rname) { v_rname = rname; }
    void SetPOS(UInt_t pos) { v_pos = pos; }
    void SetMAPQ(UChar_t mapq) { v_mapq = mapq; }
-   void SetCIGAR(const char *cigar) { v_cigar = cigar; }
+   void SetCIGAR(const char *cigar);
    void SetRNEXT(const char *rnext) { v_rnext = rnext; }
    void SetPNEXT(UInt_t pnext) { v_pnext = pnext; }
    void SetTLEN(Int_t tlen) { v_tlen = tlen; }
@@ -59,10 +61,14 @@ public:
    const char *GetRNAME() const { return v_rname; }
    UInt_t      GetPOS() const { return v_pos; }
    UInt_t      GetMAPQ() const { return v_mapq; }
-   const char *GetCIGAR() const { return v_cigar; }
+   Int_t       GetNCIGAROP() { return v_ncigar_op; }
+   Int_t       GetCIGAROPLEN(Int_t idx);
+   Int_t       GetCIGAROP(Int_t idx);
+   const char *GetCIGAR() const;
    const char *GetRNEXT() const { return v_rnext; }
    UInt_t      GetPNEXT() const { return v_pnext; }
    Int_t       GetTLEN() const { return v_tlen; }
+   Int_t       GetSEQLEN() const { return v_lseq; }
    const char *GetSEQ() const;
    const char *GetQUAL() const { return v_qual; }
    const char *GetOPT(Int_t idx) const { return v_opt[idx]; }
@@ -72,21 +78,40 @@ public:
    ClassDef(RAMRecord,1)
 };
 
+// Return values of GetCIGAROP()
+const UChar_t RAM_CIGAR_M = 0;
+const UChar_t RAM_CIGAR_I = 1;
+const UChar_t RAM_CIGAR_D = 2;
+const UChar_t RAM_CIGAR_N = 3;
+const UChar_t RAM_CIGAR_S = 4;
+const UChar_t RAM_CIGAR_H = 5;
+const UChar_t RAM_CIGAR_P = 6;
+const UChar_t RAM_CIGAR_EQUAL = 7;
+const UChar_t RAM_CIGAR_X = 8;
+
+
 inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
 {
    // RAMRecord copy ctor.
 
-   v_qname = rec.v_qname;
-   v_flag  = rec.v_flag;
-   v_rname = rec.v_rname;
-   v_pos   = rec.v_pos;
-   v_mapq  = rec.v_mapq;
-   v_cigar = rec.v_cigar;
-   v_rnext = rec.v_rnext;
-   v_pnext = rec.v_pnext;
-   v_tlen  = rec.v_tlen;
-   v_lseq  = rec.v_lseq;
-   v_lseq2 = rec.v_lseq2;
+   v_qname     = rec.v_qname;
+   v_flag      = rec.v_flag;
+   v_rname     = rec.v_rname;
+   v_pos       = rec.v_pos;
+   v_mapq      = rec.v_mapq;
+   v_cigar     = rec.v_cigar;
+   v_ncigar_op = rec.v_ncigar_op;
+   if (rec.v_cigar != nullptr) {
+      v_cigar = new UInt_t[v_ncigar_op];
+      for (int i = 0; i < v_ncigar_op; i++)
+         v_cigar[i] = rec.v_cigar[i];
+   } else
+      v_cigar = rec.v_cigar;
+   v_rnext     = rec.v_rnext;
+   v_pnext     = rec.v_pnext;
+   v_tlen      = rec.v_tlen;
+   v_lseq      = rec.v_lseq;
+   v_lseq2     = rec.v_lseq2;
    if (rec.v_seq != nullptr) {
       v_seq = new UChar_t[v_lseq2];
       for (int i = 0; i < v_lseq2; i++)
@@ -104,17 +129,26 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
 
    if (this != &rhs) {
       TObject::operator=(rhs);
-      v_qname = rhs.v_qname;
-      v_flag  = rhs.v_flag;
-      v_rname = rhs.v_rname;
-      v_pos   = rhs.v_pos;
-      v_mapq  = rhs.v_mapq;
-      v_cigar = rhs.v_cigar;
-      v_rnext = rhs.v_rnext;
-      v_pnext = rhs.v_pnext;
-      v_tlen  = rhs.v_tlen;
-      v_lseq  = rhs.v_lseq;
-      v_lseq2 = rhs.v_lseq2;
+      v_qname     = rhs.v_qname;
+      v_flag      = rhs.v_flag;
+      v_rname     = rhs.v_rname;
+      v_pos       = rhs.v_pos;
+      v_mapq      = rhs.v_mapq;
+      v_ncigar_op = rhs.v_ncigar_op;
+      if (v_cigar != nullptr)
+         delete [] v_cigar;
+      if (rhs.v_cigar != nullptr) {
+         v_cigar = new UInt_t[v_ncigar_op];
+         for (int i = 0; i < v_ncigar_op; i++)
+            v_cigar[i] = rhs.v_cigar[i];
+      } else
+         v_cigar = rhs.v_cigar;
+      v_cigar     = rhs.v_cigar;
+      v_rnext     = rhs.v_rnext;
+      v_pnext     = rhs.v_pnext;
+      v_tlen      = rhs.v_tlen;
+      v_lseq      = rhs.v_lseq;
+      v_lseq2     = rhs.v_lseq2;
       if (v_seq != nullptr)
          delete [] v_seq;
       if (rhs.v_seq != nullptr) {
@@ -123,12 +157,15 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
             v_seq[i] = rhs.v_seq[i];
       } else
          v_seq = rhs.v_seq;
-      v_qual  = rhs.v_qual;
+      v_qual = rhs.v_qual;
       for (int i = 0; i < nopt; i++)
          v_opt[i] = rhs.v_opt[i];
    }
    return *this;
 }
+
+
+static const char *codetoseq = "=ACMGRSVTWYHKDBN";
 
 inline void RAMRecord::SetSEQ(const char *seq)
 {
@@ -136,7 +173,6 @@ inline void RAMRecord::SetSEQ(const char *seq)
    // the space compared to an ASCII string as the allowed character set is limited
    // (fits in 4 instead of 8 bits).
 
-   static const char *codetoseq = "=ACMGRSVTWYHKDBN";
    static UChar_t seqtocode[256];
    static bool init = false;
    if (!init) {
@@ -176,7 +212,6 @@ inline const char *RAMRecord::GetSEQ() const
 {
    // Decode segment SEQuence from BAM like encoded format. See SetSEQ().
 
-   static const char *codetoseq = "=ACMGRSVTWYHKDBN";
    static UShort_t codetoseqpair[256];
    static bool init = false;
    if (!init) {
@@ -212,6 +247,93 @@ inline const char *RAMRecord::GetSEQ() const
    return seq;
 }
 
+
+static const char *codetocigar = "MIDNSHP=X";
+
+inline void RAMRecord::SetCIGAR(const char *cigar)
+{
+   // Use BAM like encoding for the CIGAR code.
+
+   static UChar_t cigartocode[256];
+   static UChar_t iscigarcode[256];
+   static bool init = false;
+   if (!init) {
+      memset(cigartocode, 0, 256);
+      memset(iscigarcode, 0, 256);
+      for (int i = 0; i < 9; i++) {
+         cigartocode[codetocigar[i]] = i;
+         iscigarcode[codetocigar[i]] = 1;
+      }
+      init = true;
+   }
+
+   static int maxops = 1024;   // more than enough
+   if (v_cigar == nullptr) {
+      v_cigar = new UInt_t[maxops];
+   }
+
+   int len = strlen(cigar);
+   char cig[1024];             // more than enough
+   strlcpy(cig, cigar, 1024);
+   v_ncigar_op = 0;
+   char *c = cig;
+   for (int i = 0; i < len; i++) {
+      if (iscigarcode[cig[i]] == 1) {
+         UChar_t op = cigartocode[cig[i]];
+         cig[i] = 0;
+         UInt_t oplen = atoi(c);
+         v_cigar[v_ncigar_op] = (oplen << 4) | op;
+         v_ncigar_op++;
+         if (v_ncigar_op > maxops) {
+            Error("SetCIGAR", "please increase maxops, currently %d", maxops);
+            return;
+         }
+         c = &cig[i+1];
+      }
+   }
+}
+
+inline Int_t RAMRecord::GetCIGAROPLEN(Int_t idx)
+{
+   // Return the length of the CIGAR operation specified by idx.
+
+   if (idx >= v_ncigar_op) {
+      Error("GetCIGAROPLEN", "idx=%d out of range, max=%d", idx, v_ncigar_op);
+      return 0;
+   }
+
+   return v_cigar[idx] >> 4;
+}
+
+inline Int_t RAMRecord::GetCIGAROP(Int_t idx)
+{
+   // Return opcode of the CIGAR operation specified by idx.
+
+   if (idx >= v_ncigar_op) {
+      Error("GetCIGAROPLEN", "idx=%d out of range, max=%d", idx, v_ncigar_op);
+      return 0;
+   }
+
+   return v_cigar[idx] & 0xf;
+}
+
+inline const char *RAMRecord::GetCIGAR() const
+{
+   // Rebuild the CIGAR string.
+
+   static char cigar[1024];
+
+   int l = 0;
+   for (int i = 0; i < v_ncigar_op; i++) {
+      l += snprintf(cigar+l, 1024, "%u%c", v_cigar[i] >> 4, codetocigar[v_cigar[i] & 0xf]);
+      if (l > 1024-11) {  // 9 decimals in 28 bits + 1 for op + 1 for trailing 0
+         Error("GetCIGAR", "please increase cigar string, currently %d", 1024);
+         return cigar;
+      }
+   }
+   return cigar;
+}
+
 inline void RAMRecord::Print(Option_t *) const
 {
    // Print a single record, in SAM format.
@@ -230,4 +352,3 @@ inline void RAMRecord::Print(Option_t *) const
 #endif
 
 #endif
-
