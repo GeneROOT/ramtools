@@ -6,8 +6,6 @@
 
 #include "ramrecord.h"
 
-void printRow(RAMRecord* r);
-
 void ramview(const char* file, const char *query){
     // String Parsing forma
     
@@ -73,8 +71,8 @@ void ramview(const char* file, const char *query){
                 }
                 else{
                     if(r->GetPOS() < rangeEnd){
-                        printRow(r);
-                    }
+                    	r->Print();
+		    }
                     else{
                         break;
                     }
@@ -84,20 +82,3 @@ void ramview(const char* file, const char *query){
     }
 }
 
-
-void printRow(RAMRecord* r){
-    cout << r->GetQNAME()   << "\t";
-    cout << r->GetFLAG()    << "\t";
-    cout << r->GetRNAME()   << "\t";
-    cout << r->GetPOS()     << "\t";
-    cout << r->GetMAPQ()    << "\t";
-    cout << r->GetCIGAR()   << "\t";
-    cout << r->GetRNEXT()   << "\t";
-    cout << r->GetPNEXT()   << "\t";
-    cout << r->GetTLEN()    << "\t";
-    cout << r->GetSEQ()     << "\t";
-    cout << r->GetQUAL()    << "\t";
-    for (int i = 0; i < RAMRecord::nopt; i++)
-        cout << r->GetOPT(i) << "\t";
-    cout << endl;
-}
