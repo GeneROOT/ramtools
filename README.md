@@ -16,7 +16,7 @@ ROOT scripts to convert a SAM file to a RAM (ROOT Alignment/Map) file.
     root [1] .q
 ```
 
- - To view a specific region do:
+ - To view a specific region do: (equivalent to `samtools view bamexample.bam chr1:10150-10300 `  )
 
 ```bash
     $ root
