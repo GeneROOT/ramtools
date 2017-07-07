@@ -15,6 +15,9 @@
 
 void ramview(const char* file, const char *query){
     
+    TStopwatch stopwatch;
+    stopwatch.Start();
+    
     //Open the file and load tree and reader
     auto f = TFile::Open(file);
     auto t = (TTree*) f->Get("RAM");
@@ -98,5 +101,8 @@ void ramview(const char* file, const char *query){
             }
         }
     }
+
+    stopwatch.Stop();
+    cerr << stopwatch.CpuTime() << " seconds" <<  endl;
 }
 
