@@ -8,14 +8,33 @@
 #include <TTree.h>
 #include <TFile.h>
 #include <TClass.h>
+#include <TStopwatch.h>
 #include <Compression.h>
 
 #include "ramrecord.h"
 
 
+void stripcrlf(char *tok)
+{
+   int l = strlen(tok);
+   if (l > 0 && tok[l-1] == '\n') {
+      if (l > 1 && tok[l-2] == '\r')
+         tok[l-2] = '\0';
+      else
+         tok[l-1] = '\0';
+   }
+}
+
 
 void makeram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root")
 {
+   // Convert a SAM file into a RAM file.
+
+   // start timer
+   TStopwatch stopwatch;
+   stopwatch.Start();
+
+   // open the SAM file
    FILE *fp = fopen(datafile, "r");
    if (!fp) {
       printf("file %s not found\n", datafile);
@@ -99,6 +118,8 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
             // qual
             if (ntok == 10) {
+               // strip off terminating [\r]\n (might be last token)
+               stripcrlf(tok);
                r->SetQUAL(tok);
                for (int i = 0; i < RAMRecord::nopt; i++)
                   r->SetOPT("", i);
@@ -106,8 +127,11 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
 
             // opt's
             if (ntok >= 11) {
-               if (ntok-11 < RAMRecord::nopt)
+               if (ntok-11 < RAMRecord::nopt) {
+                  // strip off terminating [\r]\n (might be last token)
+                  stripcrlf(tok);
                   r->SetOPT(tok, ntok-11);
+               }
             }
          }
          ntok++;
@@ -137,4 +161,6 @@ void makeram(const char *datafile = "samexample.sam", const char *treefile = "ra
    delete f;
 
    printf("\nProcessed %d SAM records\n", nrecords);
+
+   stopwatch.Print();
 }
