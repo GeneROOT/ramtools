@@ -21,7 +21,7 @@ public:
 
    enum EQualCompressionBits {
       kPhred33          = BIT(14),   // Default Phred+33 quality score
-      kIlluminaBinning  = BIT(15),   // Illumina binning
+      kIlluminaBinning  = BIT(15),   // Illumina 8 bin compression
       kDrop             = BIT(16)    // Drop quality score
    };
 
