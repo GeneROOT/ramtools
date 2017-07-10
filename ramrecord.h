@@ -13,6 +13,7 @@
 #include <iostream>
 
 
+
 class RAMRecord : public TObject {
 
 public:
@@ -32,16 +33,18 @@ private:
    Int_t           v_lseq;                // Length of segment SEQuence
    Int_t           v_lseq2;               // (Length+1)/2 of segment SEQuence
    UChar_t        *v_seq;                 //[v_lseq2] segment SEQuence
-   TString         v_qual;                // ASCII of Phred-scaled base QUALity+33
+   UChar_t        *v_qual;                //[v_lseq] ASCII of Phred-scaled base QUALity+33
    TString         v_opt[nopt];           // Optional fields
 
 public:
    RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
                  v_pnext(0), v_tlen(0), v_lseq(0),
-                 v_lseq2(0), v_seq(nullptr) { }
+                 v_lseq2(0), v_seq(nullptr), v_qual(nullptr) { }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
-   virtual ~RAMRecord() { delete [] v_cigar; v_cigar = nullptr; delete [] v_seq; v_seq = nullptr; }
+   virtual ~RAMRecord() { delete [] v_cigar; v_cigar = nullptr;
+                          delete [] v_seq;   v_seq   = nullptr;
+                          delete [] v_qual;  v_qual  = nullptr; }
 
    void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
@@ -53,7 +56,7 @@ public:
    void SetPNEXT(UInt_t pnext) { v_pnext = pnext; }
    void SetTLEN(Int_t tlen) { v_tlen = tlen; }
    void SetSEQ(const char *seq);
-   void SetQUAL(const char *qual) { v_qual = qual; }
+   void SetQUAL(const char *qual);
    void SetOPT(const char *opt, Int_t idx) { v_opt[idx] = opt; }
 
    const char *GetQNAME() const { return v_qname; }
@@ -70,7 +73,7 @@ public:
    Int_t       GetTLEN() const { return v_tlen; }
    Int_t       GetSEQLEN() const { return v_lseq; }
    const char *GetSEQ() const;
-   const char *GetQUAL() const { return v_qual; }
+   const char *GetQUAL() const;
    const char *GetOPT(Int_t idx) const { return v_opt[idx]; }
 
    void        Print(Option_t *option="") const;
@@ -89,6 +92,25 @@ const UChar_t RAM_CIGAR_P = 6;
 const UChar_t RAM_CIGAR_EQUAL = 7;
 const UChar_t RAM_CIGAR_X = 8;
 
+// Illumina binning scheme:
+// 1      1
+// 2-9    6
+// 10-19 15
+// 20-24 22
+// 25-29 27
+// 30-34 33
+// 35-39 37
+// >=40  40
+const UChar_t Illumina_binning[] = {
+	0,   1,  6,  6,  6,  6,  6,  6,  6,  6, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 22, 22, 22, 22, 22, 27, 27, 27, 27, 27, 33, 33, 33, 33,
+   33, 37, 37, 37, 37, 37, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+	40, 40, 40, 40, 40, 40, 40, 40
+};
+
 
 inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
 {
@@ -101,24 +123,26 @@ inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
    v_mapq      = rec.v_mapq;
    v_cigar     = rec.v_cigar;
    v_ncigar_op = rec.v_ncigar_op;
+   v_cigar     = nullptr;
    if (rec.v_cigar != nullptr) {
       v_cigar = new UInt_t[v_ncigar_op];
-      for (int i = 0; i < v_ncigar_op; i++)
-         v_cigar[i] = rec.v_cigar[i];
-   } else
-      v_cigar = rec.v_cigar;
+      memcpy(v_cigar, rec.v_cigar, v_ncigar_op*sizeof(UInt_t));
+   }
    v_rnext     = rec.v_rnext;
    v_pnext     = rec.v_pnext;
    v_tlen      = rec.v_tlen;
    v_lseq      = rec.v_lseq;
    v_lseq2     = rec.v_lseq2;
+   v_seq       = nullptr;
    if (rec.v_seq != nullptr) {
       v_seq = new UChar_t[v_lseq2];
-      for (int i = 0; i < v_lseq2; i++)
-         v_seq[i] = rec.v_seq[i];
-   } else
-      v_seq = rec.v_seq;
-   v_qual  = rec.v_qual;
+      memcpy(v_seq, rec.v_seq, v_lseq2);
+   }
+   v_qual      = nullptr;
+   if (rec.v_qual != nullptr) {
+      v_qual = new UChar_t[v_lseq];
+      memcpy(v_qual, rec.v_qual, v_lseq);
+   }
    for (int i = 0; i < nopt; i++)
       v_opt[i] = rec.v_opt[i];
 }
@@ -135,29 +159,35 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
       v_pos       = rhs.v_pos;
       v_mapq      = rhs.v_mapq;
       v_ncigar_op = rhs.v_ncigar_op;
-      if (v_cigar != nullptr)
+      if (v_cigar != nullptr) {
          delete [] v_cigar;
+         v_cigar = nullptr;
+      }
       if (rhs.v_cigar != nullptr) {
          v_cigar = new UInt_t[v_ncigar_op];
-         for (int i = 0; i < v_ncigar_op; i++)
-            v_cigar[i] = rhs.v_cigar[i];
-      } else
-         v_cigar = rhs.v_cigar;
-      v_cigar     = rhs.v_cigar;
+         memcpy(v_cigar, rhs.v_cigar, v_ncigar_op*sizeof(UInt_t));
+      }
       v_rnext     = rhs.v_rnext;
       v_pnext     = rhs.v_pnext;
       v_tlen      = rhs.v_tlen;
       v_lseq      = rhs.v_lseq;
       v_lseq2     = rhs.v_lseq2;
-      if (v_seq != nullptr)
+      if (v_seq != nullptr) {
          delete [] v_seq;
+         v_seq = nullptr;
+      }
       if (rhs.v_seq != nullptr) {
          v_seq = new UChar_t[v_lseq2];
-         for (int i = 0; i < v_lseq2; i++)
-            v_seq[i] = rhs.v_seq[i];
-      } else
-         v_seq = rhs.v_seq;
-      v_qual = rhs.v_qual;
+         memcpy(v_seq, rhs.v_seq, v_lseq2);
+      }
+      if (v_qual != nullptr) {
+         delete [] v_qual;
+         v_qual = nullptr;
+      }
+      if (rhs.v_qual != nullptr) {
+         v_qual = new UChar_t[v_lseq];
+         memcpy(v_qual, rhs.v_qual, v_lseq);
+      }
       for (int i = 0; i < nopt; i++)
          v_opt[i] = rhs.v_opt[i];
    }
@@ -187,7 +217,7 @@ inline void RAMRecord::SetSEQ(const char *seq)
    v_lseq = strlen(seq);
    v_lseq2 = (v_lseq + 1)/2;
 
-   if (v_lseq2 > maxlseq2) {
+   if (v_seq != nullptr && v_lseq2 > maxlseq2) {
       delete [] v_seq;
       v_seq = nullptr;
    }
@@ -228,7 +258,7 @@ inline const char *RAMRecord::GetSEQ() const
    if (!v_seq)
       return "";
 
-   if (v_lseq > maxlseq) {
+   if (seq != nullptr && v_lseq > maxlseq) {
       delete [] seq;
       seq = nullptr;
    }
@@ -249,6 +279,52 @@ inline const char *RAMRecord::GetSEQ() const
    }
 
    return seq;
+}
+
+inline void RAMRecord::SetQUAL(const char *qual)
+{
+   // Set QUALity string. This is in Phred+33 scale, same as in BAM.
+
+   static Int_t maxlqual = 0;
+
+   if (v_qual != nullptr && v_lseq > maxlqual) {
+      delete [] v_qual;
+      v_qual = nullptr;
+   }
+
+   if (v_qual == nullptr && v_lseq) {
+      maxlqual = v_lseq;
+      v_qual = new UChar_t[v_lseq];
+   }
+
+   memcpy(v_qual, qual, v_lseq);
+}
+
+inline const char *RAMRecord::GetQUAL() const
+{
+   // Decode QUALity. See also SetQUAL().
+
+   static int maxlqual = 0;
+   static char *qual = nullptr;
+
+   // in case column v_qual is not read
+   if (!v_qual)
+      return "";
+
+   if (qual != nullptr && v_lseq > maxlqual) {
+      delete [] qual;
+      qual = nullptr;
+   }
+
+   if (qual == nullptr && v_lseq) {
+      maxlqual = v_lseq;
+      qual = new char[v_lseq+1];
+      qual[v_lseq] = '\0';
+   }
+
+   memcpy(qual, v_qual, v_lseq);
+
+   return qual;
 }
 
 
