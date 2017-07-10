@@ -19,22 +19,28 @@ class RAMRecord : public TObject {
 public:
    static const int mincol = 11, maxcol = 14, nopt = maxcol - mincol;
 
+   enum EQualCompressionBits {
+      kPhred33          = BIT(14),   // Default Phred+33 quality score
+      kIlluminaBinning  = BIT(15),   // Illumina binning
+      kDrop             = BIT(16)    // Drop quality score
+   };
+
 private:
-   TString         v_qname;               // Query template NAME
-   UShort_t        v_flag;                // Bitwise FLAG
-   TString         v_rname;               // Reference sequence NAME
-   UInt_t          v_pos;                 // 1-based left most mapping POSition
-   UChar_t         v_mapq;                // MAPing Quality
-   Int_t           v_ncigar_op;           // Number of CIGAR operands
-   UInt_t         *v_cigar;               //[v_ncigar_op] (op_len<<4|op. "MIDNSHP=X" -> "012345678")
-   TString         v_rnext;               // Reference name of the mate/next read
-   UInt_t          v_pnext;               // Position of the mate/next read
-   Int_t           v_tlen;                // Observed Template LENgth
-   Int_t           v_lseq;                // Length of segment SEQuence
-   Int_t           v_lseq2;               // (Length+1)/2 of segment SEQuence
-   UChar_t        *v_seq;                 //[v_lseq2] segment SEQuence
-   UChar_t        *v_qual;                //[v_lseq] ASCII of Phred-scaled base QUALity+33
-   TString         v_opt[nopt];           // Optional fields
+   TString         v_qname;          // Query template NAME
+   UShort_t        v_flag;           // Bitwise FLAG
+   TString         v_rname;          // Reference sequence NAME
+   UInt_t          v_pos;            // 1-based left most mapping POSition
+   UChar_t         v_mapq;           // MAPing Quality
+   Int_t           v_ncigar_op;      // Number of CIGAR operands
+   UInt_t         *v_cigar;          //[v_ncigar_op] (op_len<<4|op. "MIDNSHP=X" -> "012345678")
+   TString         v_rnext;          // Reference name of the mate/next read
+   UInt_t          v_pnext;          // Position of the mate/next read
+   Int_t           v_tlen;           // Observed Template LENgth
+   Int_t           v_lseq;           // Length of segment SEQuence
+   Int_t           v_lseq2;          // (Length+1)/2 of segment SEQuence
+   UChar_t        *v_seq;            //[v_lseq2] segment SEQuence
+   UChar_t        *v_qual;           //[v_lseq] ASCII of Phred-scaled base QUALity+33
+   TString         v_opt[nopt];      // Optional fields
 
 public:
    RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
@@ -101,7 +107,7 @@ const UChar_t RAM_CIGAR_X = 8;
 // 30-34 33
 // 35-39 37
 // >=40  40
-const UChar_t Illumina_binning[] = {
+static const UChar_t illumina_binning[] = {
 	0,   1,  6,  6,  6,  6,  6,  6,  6,  6, 15, 15, 15, 15, 15, 15, 15,
    15, 15, 15, 22, 22, 22, 22, 22, 27, 27, 27, 27, 27, 33, 33, 33, 33,
    33, 37, 37, 37, 37, 37, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
@@ -111,6 +117,10 @@ const UChar_t Illumina_binning[] = {
 	40, 40, 40, 40, 40, 40, 40, 40
 };
 
+inline static UChar_t IlluminaBinning(UChar_t qual)
+{
+   return illumina_binning[qual-33];
+}
 
 inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
 {
@@ -297,7 +307,15 @@ inline void RAMRecord::SetQUAL(const char *qual)
       v_qual = new UChar_t[v_lseq];
    }
 
-   memcpy(v_qual, qual, v_lseq);
+   if (TestBit(RAMRecord::kPhred33)) {
+      memcpy(v_qual, qual, v_lseq);
+   } else if (TestBit(RAMRecord::kIlluminaBinning)) {
+      for (int i = 0; i < v_lseq; i++)
+         v_qual[i] = IlluminaBinning(qual[i]);
+   } else if (TestBit(RAMRecord::kDrop)) {
+      memset(v_qual, 0, v_lseq);
+   } else
+      memcpy(v_qual, qual, v_lseq);
 }
 
 inline const char *RAMRecord::GetQUAL() const
@@ -322,7 +340,15 @@ inline const char *RAMRecord::GetQUAL() const
       qual[v_lseq] = '\0';
    }
 
-   memcpy(qual, v_qual, v_lseq);
+   if (TestBit(RAMRecord::kPhred33)) {
+      memcpy(qual, v_qual, v_lseq);
+   } else if (TestBit(RAMRecord::kIlluminaBinning)) {
+      for (int i = 0; i < v_lseq; i++)
+         qual[i] = v_qual[i]+33;   // make printable
+   } else if (TestBit(RAMRecord::kDrop)) {
+      strlcpy(qual, "*", v_lseq+1);
+   } else
+      memcpy(qual, v_qual, v_lseq);
 
    return qual;
 }
