@@ -26,7 +26,8 @@ void stripcrlf(char *tok)
 }
 
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root")
+void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
+              UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
 
@@ -52,8 +53,8 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    // create a branch for a RAMRecord
    // don't stream TObject info, but still nice to have a TObject derived class
    auto *r = new RAMRecord;
-   RAMRecord::Class()->IgnoreTObjectStreamer();
-   tree->Branch("RAMRecord.", &r, 64000, 1);
+   r->SetBit(quality_policy);
+   tree->Branch("RAMRecord.", &r, 64000, 99);
 
    int nlines = 0;
    int nrecords = 0;
