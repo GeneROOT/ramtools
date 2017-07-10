@@ -15,13 +15,14 @@ void ramreader(const char *file = "ramexample.root")
    auto f = TFile::Open(file);
    auto t = (TTree*) f->Get("RAM");
 
-   RAMRecord *r = 0;;
+   RAMRecord *r = 0;
 
    t->SetBranchAddress("RAMRecord.", &r);
 
    printf("The file contains %lld RAMRecords\n\n", t->GetEntries());
 
    t->SetBranchStatus("RAMRecord.*", 0);
+   t->SetBranchStatus("RAMRecord.TObject.fBits", 1);
    t->SetBranchStatus("RAMRecord.v_qname", 1);
    t->SetBranchStatus("RAMRecord.v_lseq", 1);
    t->SetBranchStatus("RAMRecord.v_seq", 1);
