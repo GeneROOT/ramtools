@@ -17,8 +17,6 @@
 class RAMRecord : public TObject {
 
 public:
-   static const int mincol = 11, maxcol = 14, nopt = maxcol - mincol;
-
    enum EQualCompressionBits {
       kPhred33          = BIT(14),   // Default Phred+33 quality score
       kIlluminaBinning  = BIT(15),   // Illumina 8 bin compression
@@ -40,17 +38,19 @@ private:
    Int_t           v_lseq2;          // (Length+1)/2 of segment SEQuence
    UChar_t        *v_seq;            //[v_lseq2] segment SEQuence
    UChar_t        *v_qual;           //[v_lseq] ASCII of Phred-scaled base QUALity+33
-   TString         v_opt[nopt];      // Optional fields
+   Int_t           v_nopt;           // Number of optional fields
+   TString        *v_opt;            //[v_nopt] Optional fields
 
 public:
    RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
-                 v_pnext(0), v_tlen(0), v_lseq(0),
-                 v_lseq2(0), v_seq(nullptr), v_qual(nullptr) { }
+                 v_pnext(0), v_tlen(0), v_lseq(0), v_nopt(0),
+                 v_lseq2(0), v_seq(nullptr), v_qual(nullptr), v_opt(nullptr) { }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
    virtual ~RAMRecord() { delete [] v_cigar; v_cigar = nullptr;
                           delete [] v_seq;   v_seq   = nullptr;
-                          delete [] v_qual;  v_qual  = nullptr; }
+                          delete [] v_qual;  v_qual  = nullptr;
+                          delete [] v_opt;   v_opt   = nullptr; }
 
    void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
@@ -63,7 +63,8 @@ public:
    void SetTLEN(Int_t tlen) { v_tlen = tlen; }
    void SetSEQ(const char *seq);
    void SetQUAL(const char *qual);
-   void SetOPT(const char *opt, Int_t idx) { v_opt[idx] = opt; }
+   void ResetNOPT() { v_nopt = 0; }
+   void SetOPT(const char *opt);
 
    const char *GetQNAME() const { return v_qname; }
    UInt_t      GetFLAG() const { return v_flag; }
@@ -80,7 +81,8 @@ public:
    Int_t       GetSEQLEN() const { return v_lseq; }
    const char *GetSEQ() const;
    const char *GetQUAL() const;
-   const char *GetOPT(Int_t idx) const { return v_opt[idx]; }
+   Int_t       GetNOPT() const { return v_nopt; }
+   const char *GetOPT(Int_t idx) const;
 
    void        Print(Option_t *option="") const;
 
@@ -153,8 +155,13 @@ inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
       v_qual = new UChar_t[v_lseq];
       memcpy(v_qual, rec.v_qual, v_lseq);
    }
-   for (int i = 0; i < nopt; i++)
-      v_opt[i] = rec.v_opt[i];
+   v_nopt      = rec.v_nopt;
+   v_opt       = nullptr;
+   if (rec.v_opt != nullptr) {
+      v_opt = new TString[v_nopt];
+      for (int i = 0; i < v_nopt; i++)
+         v_opt[i] = rec.v_opt[i];
+   }
 }
 
 inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
@@ -198,8 +205,16 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
          v_qual = new UChar_t[v_lseq];
          memcpy(v_qual, rhs.v_qual, v_lseq);
       }
-      for (int i = 0; i < nopt; i++)
-         v_opt[i] = rhs.v_opt[i];
+      v_nopt     = rhs.v_nopt;
+      if (v_opt != nullptr) {
+         delete [] v_opt;
+         v_opt = nullptr;
+      }
+      if (rhs.v_opt != nullptr) {
+         v_opt = new TString[v_nopt];
+         for (int i = 0; i < v_nopt; i++)
+            v_opt[i] = rhs.v_opt[i];
+      }
    }
    return *this;
 }
@@ -444,6 +459,37 @@ inline const char *RAMRecord::GetCIGAR() const
    return cigar;
 }
 
+inline void RAMRecord::SetOPT(const char *opt)
+{
+   // Set the optional fields.
+
+   static int maxopt = 30;    // hopefully enough
+   if (v_opt == nullptr) {
+      v_opt = new TString[maxopt];
+   }
+
+   if (v_nopt >= maxopt) {
+      // TODO: resize array
+      Error("SetOPT", "please increase maxopt, currently %d", maxopt);
+      return;
+   }
+
+   v_opt[v_nopt] = opt;
+   v_nopt++;
+}
+
+inline const char *RAMRecord::GetOPT(Int_t idx) const
+{
+   // Get an optional field specified by the idx.
+
+   if (idx >= v_nopt) {
+      Error("GetOPT", "idx=%d out of range, max=%d", idx, v_nopt);
+      return 0;
+   }
+
+   return v_opt[idx];
+}
+
 inline void RAMRecord::Print(Option_t *) const
 {
    // Print a single record, in SAM format.
@@ -452,7 +498,7 @@ inline void RAMRecord::Print(Option_t *) const
              << GetPOS() << "\t" << GetMAPQ() << "\t" << GetCIGAR() << "\t"
              << GetRNEXT() << "\t" << GetPNEXT() << "\t" << GetTLEN() << "\t"
              << GetSEQ() << "\t" << GetQUAL();
-   for (int i = 0; i < nopt; i++)
+   for (int i = 0; i < GetNOPT(); i++)
       std::cout << "\t" << GetOPT(i);
    std::cout << endl;
 }
