@@ -122,31 +122,17 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
                // strip off terminating [\r]\n (might be last token)
                stripcrlf(tok);
                r->SetQUAL(tok);
-               for (int i = 0; i < RAMRecord::nopt; i++)
-                  r->SetOPT("", i);
+               r->ResetNOPT();
             }
 
             // opt's
             if (ntok >= 11) {
-               if (ntok-11 < RAMRecord::nopt) {
-                  // strip off terminating [\r]\n (might be last token)
-                  stripcrlf(tok);
-                  r->SetOPT(tok, ntok-11);
-               }
+               // strip off terminating [\r]\n (might be last token)
+               stripcrlf(tok);
+               r->SetOPT(tok);
             }
          }
          ntok++;
-      }
-
-      if (ntok < RAMRecord::mincol && !header) {
-         printf("[%d]: error -- %d data values read instead of %d\n",
-                nlines, ntok, RAMRecord::mincol);
-         // skip record
-         continue;
-      }
-      if (ntok > RAMRecord::maxcol && !header) {
-         printf("[%d]: warning -- %d data values read, %d value(s) truncated\n",
-                nlines, ntok, ntok - RAMRecord::maxcol);
       }
 
       if (!header) {
