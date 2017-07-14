@@ -80,6 +80,27 @@ if __name__ == '__main__':
 
             bamfile = "{0}.bam".format(row['genome'])
             rootfile = "{0}.root".format(row['genome'])
+
+            if not os.path.isfile(bamfile):
+                for path in arguments['--path']
+                    real_bamfile = os.path.join(path, bamfile)
+                    if os.path.isfile(real_bamfile):
+                        bamfile = real_bamfile
+                        break
+                else:
+                    print("Could not find {0}".format(bamfile))
+                    sys.exit(1)
+
+            if not os.path.isfile(ramfile):
+                for path in arguments['--path']
+                    real_ramfile = os.path.join(path, ramfile)
+                    if os.path.isfile(real_ramfile):
+                        ramfile = real_ramfile
+                        break
+                else:
+                    print("Could not find {0}".format(ramfile))
+                    sys.exit(1)
+
             region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
             samtools_cmd = [
