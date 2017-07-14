@@ -1,1 +1,7 @@
 ramexample.root
+*.csv
+*.log
+*.perf
+*.bam
+*.bam.bai
+*.root
