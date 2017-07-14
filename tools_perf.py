@@ -1,6 +1,6 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--rname RNAMES]
                                  [--region MIN MAX] [--out OUTFILE] GENOME...
-          tools_perf.py run FILE [RANGE] [--path PATH]...
+          tools_perf.py run FILE [RANGE] [--out FOLDER] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -25,6 +25,7 @@ import sys
 from docopt import docopt
 import pandas as pd
 import subprocess
+from datetime import datetime
 
 def rangestr2list(s):
     return sum(((list(range(*[int(j) + k for k,j in enumerate(i.split('-'))]))
@@ -76,13 +77,16 @@ if __name__ == '__main__':
 
         arguments['--path'] = ['.'] + arguments['--path']
 
+        outfolder = arguments['--out'] if arguments['--out'] else '.'
+        os.makedirs(outfolder, exist_ok=True)
+
         for index, row in df.iterrows():
 
             bamfile = "{0}.bam".format(row['genome'])
             rootfile = "{0}.root".format(row['genome'])
 
             if not os.path.isfile(bamfile):
-                for path in arguments['--path']
+                for path in arguments['--path']:
                     real_bamfile = os.path.join(path, bamfile)
                     if os.path.isfile(real_bamfile):
                         bamfile = real_bamfile
@@ -91,33 +95,41 @@ if __name__ == '__main__':
                     print("Could not find {0}".format(bamfile))
                     sys.exit(1)
 
-            if not os.path.isfile(ramfile):
-                for path in arguments['--path']
-                    real_ramfile = os.path.join(path, ramfile)
+            if not os.path.isfile(rootfile):
+                for path in arguments['--path']:
+                    real_ramfile = os.path.join(path, rootfile)
                     if os.path.isfile(real_ramfile):
-                        ramfile = real_ramfile
+                        rootfile = real_ramfile
                         break
                 else:
-                    print("Could not find {0}".format(ramfile))
+                    print("Could not find {0}".format(rootfile))
                     sys.exit(1)
 
             region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
+
+            logfile = "samtools_{0}_{1}".format(row['genome'], region)
+            logfile = os.path.join(outfolder, logfile)
+
             samtools_cmd = [
-            "/usr/bin/time", "-v", "--output=samtools_{0}_{1}.perf".format(row['genome'], region),
+            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
             "samtools", "view", bamfile, region
             ]
 
-            
-            with open("samtools_{0}_{1}.log".format(row['genome'], region) , 'w') as f:
+            print("[{2}] Executing samtools view on {0}.bam {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            with open(logfile + ".log" , 'w') as f:
                 subprocess.call(samtools_cmd, stdout=f)
 
+
+            logfile = "ramtools_{0}_{1}".format(row['genome'], region)
+            logfile = os.path.join(outfolder, logfile)
+
             ramtools_cmd = [
-            "/usr/bin/time", "-v", "--output=ramtools_{0}_{1}.perf".format(row['genome'], region),
+            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
             "root", "-q", "-l", "-b", "ramview.C(\"{0}\", \"{1}\")".format(rootfile, region)
             ]
 
-            print(ramtools_cmd)
-            with open("ramtools_{0}_{1}.log".format(row['genome'], region) , 'w') as f:
+            print("[{2}] Executing ramtools view on {0}.root {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            with open(logfile + ".log", 'w') as f:
                 subprocess.call(ramtools_cmd, stdout=f)
 
