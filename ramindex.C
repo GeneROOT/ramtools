@@ -47,11 +47,14 @@ void ramindex(const char *file)
    
    TString current_rname = r->GetRNAME();
 
+   t->SetBranchStatus("RAMRecord.*", 0);
+   t->SetBranchStatus("RAMRecord.v_rname", 1);
+
    for (i = 0; i < t->GetEntries(); i++) {
       t->GetEvent(i);
       if (!current_rname.EqualTo(r->GetRNAME())) {
-         current_rname = r->GetRNAME();
-
+         t->SetBranchStatus("RAMRecord.v_pos", 1);
+      
          t->GetEvent(i-1);
          indexfile << i-1 << ",";
          indexfile << r->GetPOS() << endl;
@@ -60,10 +63,14 @@ void ramindex(const char *file)
          indexfile << r->GetRNAME() << ",";
          indexfile << i << ",";
          indexfile << r->GetPOS() << ",";
-            
+         current_rname = r->GetRNAME();
+         
+         t->SetBranchStatus("RAMRecord.v_pos", 0);
+
       }
    }
 
+   t->SetBranchStatus("RAMRecord.v_pos", 1);
    t->GetEvent(i-1);
    indexfile << i-1 << ",";
    indexfile << r->GetPOS() << endl;
