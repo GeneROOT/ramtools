@@ -5,3 +5,4 @@ ramexample.root
 *.bam
 *.bam.bai
 *.root
+*.root.idx

@@ -54,7 +54,7 @@ if __name__ == '__main__':
         else:
             outfile = sys.stdout
 
-        tables = {table[:-4]: pd.read_csv(table) for table in arguments['GENOMETABLE']}
+        tables = {table[:-len('.root.idx')]: pd.read_csv(table) for table in arguments['GENOMETABLE']}
 
         for i in range(N):
             genome = random.choice(list(tables.keys()))
@@ -62,7 +62,7 @@ if __name__ == '__main__':
             table = table[~table['RNAME'].str.startswith('GL')]
             row = table.ix[random.choice(table.index)]
             rname = row['RNAME']
-            a, b = random.randint(row['START'], row['END']), random.randint(row['START'], row['END'])
+            a, b = random.randint(row['beginPOS'], row['endPOS']), random.randint(row['beginPOS'], row['endPOS'])
             a, b = min(a, b), max(a, b)
             print("{0},{1},{2},{3},{4}".format(i+offset, genome, rname, a, b), file=outfile)
 

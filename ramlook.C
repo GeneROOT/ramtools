@@ -1,7 +1,7 @@
 //
-// View a region of a RAM file.
+// Print Start and End for each RNAME in CSV format
 //
-// Author: Jose Javier Gonzalez Ortiz, 5/7/2017
+// Author: Jose Javier Gonzalez Ortiz, 5/17/2017
 //
 
 #include <iostream>
@@ -48,7 +48,8 @@ void ramlook(const char *file)
       }
    }
 
-   cout << r->GetPOS()-1 << endl;
+   t->GetEvent(i-1);
+   cout << r->GetPOS() << endl;
    
    stopwatch.Print();
 }
