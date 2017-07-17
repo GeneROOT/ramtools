@@ -11,7 +11,7 @@
 
 #include "ramrecord.h"
 
-void ramrandom(const char *file, const char *outFile, const int n)
+void ramrandom(const char *file = "/eos/genome/local/14007a/realigned_SAM/6148.root", const char *outfile = "out.out", const int n = 10)
 {
    auto f = TFile::Open(file);
    auto t = (TTree*) f->Get("RAM");
