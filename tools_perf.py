@@ -1,12 +1,11 @@
-"""Usage: tools_perf.py generate [-n NUMBER] [--rname RNAMES]
-                                 [--region MIN MAX] [--out OUTFILE] GENOME...
+"""Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
           tools_perf.py run FILE [RANGE] [--out FOLDER] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
 
 Arguments:
-  GENOME      Identifier of the genome
+  GENOMETABLE CSV file with name of genome and ranges for each RNAME
   FILE        CSV file with genome, rname and region
   RANGE       Range in comma/dash separated value for the experiments to execute
   LOGFILE     Output of calling the tools_perf run on a set of files
@@ -14,8 +13,6 @@ Arguments:
 Options:
   -h --help
   -n NUMBER             Amount of records to generate
-  -c, --rname RNAMES    Range of chromosomes in comma separated format
-  -r, --region MIN MAX  Values to consider for the view function generation
   -o, --out OUTFILE     File to save/append values, defaults to stdin
   -p, --path path       Additional paths to look for bam/root files
 """
@@ -42,13 +39,7 @@ if __name__ == '__main__':
 
         outfile = arguments['--out'] if arguments['--out'] else None
         
-        rnames = arguments['--rname'].split(',') if arguments['--rname'] else list(range(46))
-
-        region_min = int(arguments['--region']) if arguments['--region'] else 1
-        region_max = int(arguments['MAX']) if arguments['MAX'] else int(1e7)
-
         offset = 0
-
         if outfile is not None:
             if not os.path.isfile(outfile):
                 with open(outfile, 'w') as f:
@@ -62,10 +53,15 @@ if __name__ == '__main__':
         else:
             outfile = sys.stdout
 
+        tables = {table.strip('.csv'): pd.read_csv(table) for table in arguments['GENOMETABLE']}
+
         for i in range(N):
-            genome = random.choice(arguments['GENOME'])
-            rname = random.choice(rnames)
-            a, b = random.randint(region_min, region_max), random.randint(region_min, region_max)
+            genome = random.choice(list(tables.keys()))
+            table = tables[genome]
+            table = table[~table['RNAME'].str.startswith('GL')]
+            row = table.ix[random.choice(table.index)]
+            rname = row['RNAME']
+            a, b = random.randint(row['START'], row['END']), random.randint(row['START'], row['END'])
             a, b = min(a, b), max(a, b)
             print("{0},{1},{2},{3},{4}".format(i+offset, genome, rname, a, b), file=outfile)
 
@@ -116,7 +112,7 @@ if __name__ == '__main__':
             "samtools", "view", bamfile, region
             ]
 
-            print("[{2}] Executing samtools view on {0}.bam {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log" , 'w') as f:
                 subprocess.call(samtools_cmd, stdout=f)
 
@@ -129,7 +125,7 @@ if __name__ == '__main__':
             "root", "-q", "-l", "-b", "ramview.C(\"{0}\", \"{1}\")".format(rootfile, region)
             ]
 
-            print("[{2}] Executing ramtools view on {0}.root {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log", 'w') as f:
                 subprocess.call(ramtools_cmd, stdout=f)
 
