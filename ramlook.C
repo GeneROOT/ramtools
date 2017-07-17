@@ -37,12 +37,14 @@ void ramlook(const char *file)
    cout << r->GetRNAME() << " " << r->GetPOS() << " ";
    TString current_rname = r->GetRNAME();
 
-   
    for (int i = 0; i < t->GetEntries(); i++) {
       t->GetEvent(i);
       if (!current_rname.EqualTo(r->GetRNAME())) {
-         cout << r->GetPOS()-1 << endl;
+         t->GetEvent(i-1);
+         cout << r->GetPOS() << endl;
+         t->GetEvent(i);
          cout << r->GetRNAME() << " " << r->GetPOS() << " ";
+         current_rname = r->GetRNAME();
       }
    }
 
