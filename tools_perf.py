@@ -53,7 +53,7 @@ if __name__ == '__main__':
         else:
             outfile = sys.stdout
 
-        tables = {table.strip('.csv'): pd.read_csv(table) for table in arguments['GENOMETABLE']}
+        tables = {table[:-4]: pd.read_csv(table) for table in arguments['GENOMETABLE']}
 
         for i in range(N):
             genome = random.choice(list(tables.keys()))
@@ -75,6 +75,8 @@ if __name__ == '__main__':
 
         outfolder = arguments['--out'] if arguments['--out'] else '.'
         os.makedirs(outfolder, exist_ok=True)
+
+        processes = []
 
         for index, row in df.iterrows():
 
@@ -114,7 +116,7 @@ if __name__ == '__main__':
 
             print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log" , 'w') as f:
-                subprocess.call(samtools_cmd, stdout=f)
+                processes.append(subprocess.Popen(samtools_cmd, stdout=f))
 
 
             logfile = "ramtools_{0}_{1}".format(row['genome'], region)
@@ -127,5 +129,7 @@ if __name__ == '__main__':
 
             print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log", 'w') as f:
-                subprocess.call(ramtools_cmd, stdout=f)
+                processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+
+        exit_codes = [p.wait() for p in processes]
 
