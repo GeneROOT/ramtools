@@ -88,7 +88,7 @@ void ramview(const char *file, const char *query)
                break;
             } else {
                // Within the region
-               if (r->GetPOS() < rangeEnd) {
+               if (r->GetPOS() <= rangeEnd) {
                   r->Print();
                } else {
                   break;
