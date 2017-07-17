@@ -1,5 +1,5 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
-          tools_perf.py run FILE [RANGE] [--out FOLDER] [--path PATH]...
+          tools_perf.py run FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -130,6 +130,9 @@ if __name__ == '__main__':
             print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log", 'w') as f:
                 processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+
+            if not arguments['-P']:
+                exit_codes = [p.wait() for p in processes]
 
         exit_codes = [p.wait() for p in processes]
 
