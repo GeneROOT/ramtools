@@ -1,5 +1,6 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
-          tools_perf.py run FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
+          tools_perf.py run samview FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
+          tools_perf.py run ramview FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -105,31 +106,33 @@ if __name__ == '__main__':
 
             region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
+            if arguments['samview']:
 
-            logfile = "samtools_{0}_{1}".format(row['genome'], region)
-            logfile = os.path.join(outfolder, logfile)
+                logfile = "samtools_{0}_{1}".format(row['genome'], region)
+                logfile = os.path.join(outfolder, logfile)
+                
+                samtools_cmd = [
+                "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                "samtools", "view", bamfile, region
+                ]
 
-            samtools_cmd = [
-            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-            "samtools", "view", bamfile, region
-            ]
+                print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                with open(logfile + ".log" , 'w') as f:
+                    processes.append(subprocess.Popen(samtools_cmd, stdout=f))
 
-            print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            with open(logfile + ".log" , 'w') as f:
-                processes.append(subprocess.Popen(samtools_cmd, stdout=f))
+            elif arguments['ramview']:
 
+                logfile = "ramtools_{0}_{1}".format(row['genome'], region)
+                logfile = os.path.join(outfolder, logfile)
 
-            logfile = "ramtools_{0}_{1}".format(row['genome'], region)
-            logfile = os.path.join(outfolder, logfile)
+                ramtools_cmd = [
+                "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                "root", "-q", "-l", "-b", "ramview.C(\"{0}\", \"{1}\")".format(rootfile, region)
+                ]
 
-            ramtools_cmd = [
-            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-            "root", "-q", "-l", "-b", "ramview.C(\"{0}\", \"{1}\")".format(rootfile, region)
-            ]
-
-            print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            with open(logfile + ".log", 'w') as f:
-                processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+                print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                with open(logfile + ".log", 'w') as f:
+                    processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
 
             if not arguments['-P']:
                 exit_codes = [p.wait() for p in processes]
