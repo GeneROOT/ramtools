@@ -6,3 +6,5 @@ ramexample.root
 *.bam.bai
 *.root
 *.root.idx
+*.png
+.ipynb_checkpoints/
