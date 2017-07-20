@@ -84,7 +84,7 @@ void ramview(const char *file, const char *query)
 
       while(first_row < 0){
          middle = (top+bottom)/2;
-         t->GetEvent(middle);
+         t->GetEntry(middle);
          int middlePOS = r->GetPOS();
          // cout << top << "\t" << middle << "\t" << bottom << "\t" << " || ";
          // cout << topPOS << "\t" << middlePOS << "\t" << bottomPOS << "\t" << endl;
@@ -107,13 +107,13 @@ void ramview(const char *file, const char *query)
    }
 
    t->SetBranchStatus("RAMRecord.v_lseq", 1);
-   t->GetEvent(first_row);
+   t->GetEntry(first_row);
    
    // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << endl;
    
    while(r->GetPOS() + r->GetSEQLEN() >= rangeStart){
       first_row--;
-      t->GetEvent(first_row);
+      t->GetEntry(first_row);
       if(first_row < begin){
          break;
       }
@@ -125,7 +125,7 @@ void ramview(const char *file, const char *query)
    t->SetBranchStatus("RAMRecord.*", 1);
    
    for(int i=first_row; i < end; i++){
-      t->GetEvent(i);
+      t->GetEntry(i);
       if(r->GetPOS() > rangeEnd){
          break;
       }
