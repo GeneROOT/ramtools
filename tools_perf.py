@@ -26,21 +26,22 @@ import pandas as pd
 import subprocess
 from datetime import datetime
 
+
 def rangestr2list(s):
-    return sum(((list(range(*[int(j) + k for k,j in enumerate(i.split('-'))]))
-         if '-' in i else [int(i)]) for i in s.split(',')), [])
+    return sum(((list(range(*[int(j) + k for k, j in enumerate(i.split('-'))]))
+                if '-' in i else [int(i)]) for i in s.split(',')), [])
 
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    
+
     # print(arguments)
     if arguments['generate']:
 
         N = int(arguments['-n']) if arguments['-n'] else 10
 
         outfile = arguments['--out'] if arguments['--out'] else None
-        
+
         offset = 0
         if outfile is not None:
             if not os.path.isfile(outfile):
@@ -69,7 +70,7 @@ if __name__ == '__main__':
 
     elif arguments['run']:
         df = pd.read_csv(arguments['FILE'])
-        
+
         if arguments['RANGE']:
             df = df.ix[rangestr2list(arguments['RANGE'])]
 
@@ -111,14 +112,14 @@ if __name__ == '__main__':
 
                 logfile = "samtools_{0}_{1}".format(row['genome'], region)
                 logfile = os.path.join(outfolder, logfile)
-                
+
                 samtools_cmd = [
-                "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                "samtools", "view", bamfile, region
+                    "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                    "samtools", "view", bamfile, region
                 ]
 
                 print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                with open(logfile + ".log" , 'w') as f:
+                with open(logfile + ".log", 'w') as f:
                     processes.append(subprocess.Popen(samtools_cmd, stdout=f))
 
             elif arguments['ramview']:
@@ -129,8 +130,8 @@ if __name__ == '__main__':
                 ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"
 
                 ramtools_cmd = [
-                "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                "root", "-q", "-l", "-b", "{2}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro)
+                    "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                    "root", "-q", "-l", "-b", "{2}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro)
                 ]
 
                 print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
@@ -141,4 +142,3 @@ if __name__ == '__main__':
                 exit_codes = [p.wait() for p in processes]
 
         exit_codes = [p.wait() for p in processes]
-
