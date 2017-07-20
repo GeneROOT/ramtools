@@ -1,6 +1,6 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
           tools_perf.py run samview FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
-          tools_perf.py run ramview FILE [RANGE] [-P] [--out FOLDER] [--path PATH]...
+          tools_perf.py run ramview FILE [RANGE] [-P] [--out FOLDER] [--macro MACRO] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -16,6 +16,7 @@ Options:
   -n NUMBER             Amount of records to generate
   -o, --out OUTFILE     File to save/append values, defaults to stdin
   -p, --path path       Additional paths to look for bam/root files
+  --macro               Custom ramview macro to crossvalidate
 """
 import os
 import random
@@ -125,9 +126,11 @@ if __name__ == '__main__':
                 logfile = "ramtools_{0}_{1}".format(row['genome'], region)
                 logfile = os.path.join(outfolder, logfile)
 
+                ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"
+
                 ramtools_cmd = [
                 "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                "root", "-q", "-l", "-b", "ramview.C(\"{0}\", \"{1}\")".format(rootfile, region)
+                "root", "-q", "-l", "-b", "{2}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro)
                 ]
 
                 print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
