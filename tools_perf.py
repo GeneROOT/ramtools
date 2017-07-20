@@ -16,7 +16,7 @@ Options:
   -n NUMBER             Amount of records to generate
   -o, --out OUTFILE     File to save/append values, defaults to stdin
   -p, --path path       Additional paths to look for bam/root files
-  --macro               Custom ramview macro to crossvalidate
+  --macro MACRO         Custom ramview macro to crossvalidate
 """
 import os
 import random
@@ -35,7 +35,7 @@ def rangestr2list(s):
 if __name__ == '__main__':
     arguments = docopt(__doc__)
 
-    # print(arguments)
+    print(arguments)
     if arguments['generate']:
 
         N = int(arguments['-n']) if arguments['-n'] else 10
