@@ -8,3 +8,4 @@ ramexample.root
 *.root.idx
 *.png
 .ipynb_checkpoints/
+tmp/

@@ -500,7 +500,7 @@ inline void RAMRecord::Print(Option_t *) const
              << GetSEQ() << "\t" << GetQUAL();
    for (int i = 0; i < GetNOPT(); i++)
       std::cout << "\t" << GetOPT(i);
-   std::cout << endl;
+   std::cout << std::endl;
 }
 
 #ifdef __ROOTCLING__

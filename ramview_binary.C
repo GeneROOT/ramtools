@@ -13,7 +13,7 @@
 
 #include "ramrecord.h"
 
-void ramview(const char *file, const char *query)
+void ramview_binary(const char *file, const char *query)
 {
 
    TStopwatch stopwatch;
