@@ -9,3 +9,6 @@ ramexample.root
 *.png
 .ipynb_checkpoints/
 tmp/
+*.so
+*.d
+*.pcm
