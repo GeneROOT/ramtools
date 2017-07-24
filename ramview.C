@@ -4,7 +4,6 @@
 // Author: Jose Javier Gonzalez Ortiz, 5/7/2017
 //
 
-#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -28,111 +27,78 @@ void ramview(const char *file, const char *query)
 
    t->SetBranchAddress("RAMRecord.", &r);
 
-   // Parse queried region std::string
+   // Parse queried region string
    std::string region = query;
    int chrDelimiterPos = region.find(":");
    TString rname = region.substr(0, chrDelimiterPos);
 
    int rangeDelimiterPos = region.find("-");
 
-   UInt_t rangeStart = stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
-   UInt_t rangeEnd = stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
+   UInt_t rangeStart = std::stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
+   UInt_t rangeEnd = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
 
-   
-   // Parse index .root.idx file
-   std::string indexfilename = file;
-   indexfilename = indexfilename + ".idx";
-   std::ifstream indexfile(indexfilename);
+   // Default values to ensure correctness
+   int rnameStart = -1;
+   int posStart = -1;
 
-   std::string buffer;
-   int begin, beginPOS, end, endPOS;
-   while(indexfile.good())
-   {
-      getline(indexfile, buffer, ',');
-
-      if(!rname.EqualTo(buffer)){
-         getline(indexfile, buffer, '\n');
-         continue;
-      }
-      getline(indexfile, buffer, ',');
-      begin = stoi(buffer);
-      getline(indexfile, buffer, ',');
-      beginPOS = stoi(buffer);
-      getline(indexfile, buffer, ',');
-      end = stoi(buffer);
-      getline(indexfile, buffer, '\n');
-      endPOS = stoi(buffer);
-
-      // cout << beginPOS << " " << endPOS << std::endl;
-   }
-
-   int first_row = -1;
-
+   // Assume RNAME are chunked together
+   // We look only at the RNAME column
    t->SetBranchStatus("RAMRecord.*", 0);
-   t->SetBranchStatus("RAMRecord.v_pos", 1);
+   t->SetBranchStatus("RAMRecord.v_rname", 1);
 
-   if(rangeStart < beginPOS){
-      first_row = begin;
-   }
-   else if(rangeStart > endPOS){
-      first_row = end;
-   }
-   else{
-      int top = begin;
-      int bottom = end;
-      int topPOS = beginPOS;
-      int bottomPOS = endPOS;
-      int middle;
-
-      while(first_row < 0){
-         middle = (top+bottom)/2;
-         t->GetEntry(middle);
-         int middlePOS = r->GetPOS();
-         // cout << top << "\t" << middle << "\t" << bottom << "\t" << " || ";
-         // cout << topPOS << "\t" << middlePOS << "\t" << bottomPOS << "\t" << std::endl;
-         if(middlePOS < rangeStart){
-            if(top == middle){
-               first_row = bottom;
-            }
-            top = middle;
-            topPOS = middlePOS;
-         }
-         else if(middlePOS > rangeStart){
-            bottom = middle;
-            bottomPOS = middlePOS;
-         }
-         else{
-            first_row = middle;
-         }
-      }
-
-   }
-
-   t->SetBranchStatus("RAMRecord.v_lseq", 1);
-   t->GetEntry(first_row);
-   
-   // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << std::endl;
-   
-   while(r->GetPOS() + r->GetSEQLEN() >= rangeStart){
-      first_row--;
-      t->GetEntry(first_row);
-      if(first_row < begin){
-         break;
-      }
-      // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << std::endl;
-   }
-   first_row++;
-   // cout << first_row << std::endl;
-   
-   t->SetBranchStatus("RAMRecord.*", 1);
-   
-   for(int i=first_row; i < end; i++){
+   for (int i = 0; i < t->GetEntries(); i++) {
       t->GetEntry(i);
-      if(r->GetPOS() > rangeEnd){
+      if (rname.EqualTo(r->GetRNAME())) {
+         rnameStart = i;
          break;
       }
-      r->Print();
    }
-   
+
+   // If the RNAME was found
+   if (rnameStart >= 0) {
+
+      // We need to look both at the leftmost position (v_pos)
+      // as well as the length of sequence (v_lseq)
+      t->SetBranchStatus("RAMRecord.v_pos", 1);
+      t->SetBranchStatus("RAMRecord.v_lseq", 1);
+
+      for (int i = rnameStart; i < t->GetEntries(); i++) {
+         t->GetEntry(i);
+
+         // If the RNAME region ends
+         if (!rname.EqualTo(r->GetRNAME())) {
+            break;
+         } else {
+            if (r->GetPOS() + r->GetSEQLEN() > rangeStart) {
+               // Register first valid position for printing
+               posStart = i;
+               break;
+            }
+         }
+      }
+
+      // If the position was found
+      if (posStart >= 0) {
+
+         // Enable all fields for printing
+         t->SetBranchStatus("RAMRecord.*", 1);
+         for (int i = posStart; i < t->GetEntries(); i++) {
+            t->GetEntry(i);
+
+            // If the RNAME region ends
+            if (!rname.EqualTo(r->GetRNAME())) {
+               break;
+            } else {
+               // Within the region
+               if (r->GetPOS() <= rangeEnd) {
+                  r->Print();
+               } else {
+                  break;
+               }
+            }
+         }
+      }
+   }
+
    stopwatch.Print();
 }

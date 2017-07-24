@@ -8,12 +8,14 @@
 #include <iostream>
 #include <string>
 
+#include <TTree.h>
+#include <TFile.h>
 #include <TEventList.h>
 #include <TStopwatch.h>
 
 #include "ramrecord.h"
 
-void ramview_binary(const char *file, const char *query)
+void ramview(const char *file, const char *query)
 {
 
    TStopwatch stopwatch;
@@ -26,8 +28,8 @@ void ramview_binary(const char *file, const char *query)
 
    t->SetBranchAddress("RAMRecord.", &r);
 
-   // Parse queried region string
-   string region = query;
+   // Parse queried region std::string
+   std::string region = query;
    int chrDelimiterPos = region.find(":");
    TString rname = region.substr(0, chrDelimiterPos);
 
@@ -38,11 +40,11 @@ void ramview_binary(const char *file, const char *query)
 
    
    // Parse index .root.idx file
-   string indexfilename = file;
+   std::string indexfilename = file;
    indexfilename = indexfilename + ".idx";
-   ifstream indexfile(indexfilename);
+   std::ifstream indexfile(indexfilename);
 
-   string buffer;
+   std::string buffer;
    int begin, beginPOS, end, endPOS;
    while(indexfile.good())
    {
@@ -61,7 +63,7 @@ void ramview_binary(const char *file, const char *query)
       getline(indexfile, buffer, '\n');
       endPOS = stoi(buffer);
 
-      // cout << beginPOS << " " << endPOS << endl;
+      // cout << beginPOS << " " << endPOS << std::endl;
    }
 
    int first_row = -1;
@@ -87,7 +89,7 @@ void ramview_binary(const char *file, const char *query)
          t->GetEntry(middle);
          int middlePOS = r->GetPOS();
          // cout << top << "\t" << middle << "\t" << bottom << "\t" << " || ";
-         // cout << topPOS << "\t" << middlePOS << "\t" << bottomPOS << "\t" << endl;
+         // cout << topPOS << "\t" << middlePOS << "\t" << bottomPOS << "\t" << std::endl;
          if(middlePOS < rangeStart){
             if(top == middle){
                first_row = bottom;
@@ -109,7 +111,7 @@ void ramview_binary(const char *file, const char *query)
    t->SetBranchStatus("RAMRecord.v_lseq", 1);
    t->GetEntry(first_row);
    
-   // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << endl;
+   // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << std::endl;
    
    while(r->GetPOS() + r->GetSEQLEN() >= rangeStart){
       first_row--;
@@ -117,10 +119,10 @@ void ramview_binary(const char *file, const char *query)
       if(first_row < begin){
          break;
       }
-      // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << endl;
+      // cout << r->GetPOS() << '\t' << r->GetPOS()+r->GetSEQLEN() << '\t' << rangeStart << std::endl;
    }
    first_row++;
-   // cout << first_row << endl;
+   // cout << first_row << std::endl;
    
    t->SetBranchStatus("RAMRecord.*", 1);
    
