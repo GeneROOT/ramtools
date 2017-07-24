@@ -12,3 +12,4 @@ tmp/
 *.so
 *.d
 *.pcm
+*.cxx_tmp
