@@ -1,13 +1,14 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
-          tools_perf.py run samview FILE [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
-          tools_perf.py run ramview FILE [RANGE] [-P] [-N] [--out FOLDER] [--macro MACRO] [--path PATH]...
+          tools_perf.py convert [--macro MACRO] [-N] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
+          tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--macro MACRO] [-f FILE] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
 
 Arguments:
   GENOMETABLE CSV file with name of genome and ranges for each RNAME
-  FILE        CSV file with genome, rname and region
+  VIEWS        CSV file with genome, rname and region
   RANGE       Range in comma/dash separated value for the experiments to execute
   LOGFILE     Output of calling the tools_perf run on a set of files
 
@@ -18,6 +19,7 @@ Options:
   -o, --out OUTFILE     File to save/append values, defaults to stdin
   -p, --path path       Additional paths to look for bam/root files
   --macro MACRO         Custom ramview macro to crossvalidate
+  -f FILE               Custom rootfile for the provided genome
 """
 import os
 import random
@@ -37,6 +39,11 @@ if __name__ == '__main__':
     arguments = docopt(__doc__)
 
     compilation_flag = '+' if not arguments['-N'] else ''
+
+    outfolder = arguments['--out'] if arguments['--out'] else '.'
+    os.makedirs(outfolder, exist_ok=True)
+
+    processes = []
 
     if arguments['generate']:
 
@@ -70,18 +77,31 @@ if __name__ == '__main__':
             a, b = min(a, b), max(a, b)
             print("{0},{1},{2},{3},{4}".format(i+offset, genome, rname, a, b), file=outfile)
 
+    elif arguments['convert']:
+        samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
+
+        samfile = arguments['SAMFILE']
+        rootfile = arguments['ROOTFILE']
+
+        logfile = "samtoram_{0}_{1}".format(samfile.split('.sam')[0], samtoram_macro.split('.C')[0])
+        logfile = os.path.join(outfolder, logfile)
+
+        ramtools_cmd = [
+            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+            "root", "-q", "-l", "-b", "{2}{3}(\"{0}\", \"{1}\")".format(samfile, rootfile, samtoram_macro, compilation_flag)
+        ]
+
+        print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        with open(logfile + ".log", 'w') as f:
+            processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+
     elif arguments['run']:
-        df = pd.read_csv(arguments['FILE'])
+        df = pd.read_csv(arguments['VIEWS'])
 
         if arguments['RANGE']:
             df = df.ix[rangestr2list(arguments['RANGE'])]
 
         arguments['--path'] = ['.'] + arguments['--path']
-
-        outfolder = arguments['--out'] if arguments['--out'] else '.'
-        os.makedirs(outfolder, exist_ok=True)
-
-        processes = []
 
         for index, row in df.iterrows():
 
@@ -116,6 +136,8 @@ if __name__ == '__main__':
             elif arguments['ramview']:
 
                 rootfile = "{0}.root".format(row['genome'])
+                if arguments['-f']:
+                    rootfile = arguments['-f']
 
                 if not os.path.isfile(rootfile):
                     for path in arguments['--path']:
@@ -136,8 +158,6 @@ if __name__ == '__main__':
                     "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
                     "root", "-q", "-l", "-b", "{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)
                 ]
-
-                print(ramtools_cmd)
 
                 print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 with open(logfile + ".log", 'w') as f:
