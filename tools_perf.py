@@ -36,9 +36,8 @@ def rangestr2list(s):
 if __name__ == '__main__':
     arguments = docopt(__doc__)
 
-    compilation_flag = '+' if arguments['-N'] else ''
+    compilation_flag = '+' if not arguments['-N'] else ''
 
-    print(arguments)
     if arguments['generate']:
 
         N = int(arguments['-n']) if arguments['-n'] else 10
@@ -86,32 +85,21 @@ if __name__ == '__main__':
 
         for index, row in df.iterrows():
 
-            bamfile = "{0}.bam".format(row['genome'])
-            rootfile = "{0}.root".format(row['genome'])
-
-            if not os.path.isfile(bamfile):
-                for path in arguments['--path']:
-                    real_bamfile = os.path.join(path, bamfile)
-                    if os.path.isfile(real_bamfile):
-                        bamfile = real_bamfile
-                        break
-                else:
-                    print("Could not find {0}".format(bamfile))
-                    sys.exit(1)
-
-            if not os.path.isfile(rootfile):
-                for path in arguments['--path']:
-                    real_ramfile = os.path.join(path, rootfile)
-                    if os.path.isfile(real_ramfile):
-                        rootfile = real_ramfile
-                        break
-                else:
-                    print("Could not find {0}".format(rootfile))
-                    sys.exit(1)
-
             region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
             if arguments['samview']:
+
+                bamfile = "{0}.bam".format(row['genome'])
+
+                if not os.path.isfile(bamfile):
+                    for path in arguments['--path']:
+                        real_bamfile = os.path.join(path, bamfile)
+                        if os.path.isfile(real_bamfile):
+                            bamfile = real_bamfile
+                            break
+                    else:
+                        print("Could not find {0}".format(bamfile))
+                        sys.exit(1)
 
                 logfile = "samtools_{0}_{1}".format(row['genome'], region)
                 logfile = os.path.join(outfolder, logfile)
@@ -127,6 +115,18 @@ if __name__ == '__main__':
 
             elif arguments['ramview']:
 
+                rootfile = "{0}.root".format(row['genome'])
+
+                if not os.path.isfile(rootfile):
+                    for path in arguments['--path']:
+                        real_ramfile = os.path.join(path, rootfile)
+                        if os.path.isfile(real_ramfile):
+                            rootfile = real_ramfile
+                            break
+                    else:
+                        print("Could not find {0}".format(rootfile))
+                        sys.exit(1)
+
                 logfile = "ramtools_{0}_{1}".format(row['genome'], region)
                 logfile = os.path.join(outfolder, logfile)
 
@@ -136,6 +136,8 @@ if __name__ == '__main__':
                     "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
                     "root", "-q", "-l", "-b", "{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)
                 ]
+
+                print(ramtools_cmd)
 
                 print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 with open(logfile + ".log", 'w') as f:
