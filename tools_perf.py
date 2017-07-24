@@ -83,7 +83,7 @@ if __name__ == '__main__':
         samfile = arguments['SAMFILE']
         rootfile = arguments['ROOTFILE']
 
-        logfile = "samtoram_{0}_{1}".format(samfile.split('.sam')[0], samtoram_macro.split('.C')[0])
+        logfile = "samtoram_{0}_{1}".format(os.path.basename(samfile).split('.sam')[0], os.path.basename(samtoram_macro).split('.C')[0])
         logfile = os.path.join(outfolder, logfile)
 
         ramtools_cmd = [
