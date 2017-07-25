@@ -1,5 +1,5 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
-          tools_perf.py convert [--macro MACRO] [-N] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
           tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
           tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--macro MACRO] [-f FILE] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
@@ -20,6 +20,8 @@ Options:
   -p, --path path       Additional paths to look for bam/root files
   --macro MACRO         Custom ramview macro to crossvalidate
   -f FILE               Custom rootfile for the provided genome
+  --no-split            Reduce Splitlevel for banches
+  -c, --compression ALG Compression algorithm of choice
 """
 import os
 import random
@@ -83,12 +85,16 @@ if __name__ == '__main__':
         samfile = arguments['SAMFILE']
         rootfile = arguments['ROOTFILE']
 
-        logfile = "samtoram_{0}_{1}".format(os.path.basename(samfile).split('.sam')[0], os.path.basename(samtoram_macro).split('.C')[0])
+        split = "false" if arguments['--no-split'] else "true"
+        compression = arguments['--compression'] if arguments['--compression'] else "kLZMA"
+
+        logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], 'split' if split == 'true' else 'nosplit', compression)
         logfile = os.path.join(outfolder, logfile)
 
         ramtools_cmd = [
             "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-            "root", "-q", "-l", "-b", "{2}{3}(\"{0}\", \"{1}\")".format(samfile, rootfile, samtoram_macro, compilation_flag)
+            "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, \"{3}\")".format(samfile, rootfile, split, compression,
+                                                                                             compilation_flag)
         ]
 
         print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
