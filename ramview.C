@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 
+#include <TBranch.h>
 #include <TTree.h>
 #include <TFile.h>
 #include <TEventList.h>
@@ -27,6 +28,8 @@ void ramview(const char *file, const char *query)
 
    t->SetBranchAddress("RAMRecord.", &r);
 
+   TBranch *b = t->GetBranch("RAMRecord.");
+
    // Parse queried region string
    std::string region = query;
    int chrDelimiterPos = region.find(":");
@@ -43,8 +46,11 @@ void ramview(const char *file, const char *query)
 
    // Assume RNAME are chunked together
    // We look only at the RNAME column
-   t->SetBranchStatus("RAMRecord.*", 0);
-   t->SetBranchStatus("RAMRecord.v_rname", 1);
+   // We can only do this when there are columns
+   if(b->GetSplitLevel() > 0){
+       t->SetBranchStatus("RAMRecord.*", 0);
+       t->SetBranchStatus("RAMRecord.v_rname", 1);
+   }
 
    for (int i = 0; i < t->GetEntries(); i++) {
       t->GetEntry(i);
@@ -59,8 +65,10 @@ void ramview(const char *file, const char *query)
 
       // We need to look both at the leftmost position (v_pos)
       // as well as the length of sequence (v_lseq)
-      t->SetBranchStatus("RAMRecord.v_pos", 1);
-      t->SetBranchStatus("RAMRecord.v_lseq", 1);
+      if(b->GetSplitLevel() > 0){
+         t->SetBranchStatus("RAMRecord.v_pos", 1);
+         t->SetBranchStatus("RAMRecord.v_lseq", 1);
+      }
 
       for (int i = rnameStart; i < t->GetEntries(); i++) {
          t->GetEntry(i);
@@ -81,7 +89,9 @@ void ramview(const char *file, const char *query)
       if (posStart >= 0) {
 
          // Enable all fields for printing
-         t->SetBranchStatus("RAMRecord.*", 1);
+         if(b->GetSplitLevel() > 0){
+            t->SetBranchStatus("RAMRecord.*", 1);
+         }
          for (int i = posStart; i < t->GetEntries(); i++) {
             t->GetEntry(i);
 
