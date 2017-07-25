@@ -10,6 +10,7 @@
 #include <TClass.h>
 #include <TStopwatch.h>
 #include <Compression.h>
+#include <cstring>
 
 #include "ramrecord.h"
 
@@ -27,6 +28,7 @@ void stripcrlf(char *tok)
 
 
 void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
+              bool split = true, const char *compression = "kLZMA",
               UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
@@ -42,10 +44,22 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       return;
    }
 
+   // Select compression algorithm
+   ROOT::ECompressionAlgorithm compression_algorithm;
+   if(std::strcmp(compression, "kLZMA")){
+      compression_algorithm = ROOT::kLZMA;
+   }
+   else if(std::strcmp(compression, "kZLIB")){
+      compression_algorithm = ROOT::kZLIB;
+   }
+   else{
+      std::cout << "Invalid algorithm " << compression << std::endl;
+   }
+
    // open ROOT file
    auto f = TFile::Open(treefile, "RECREATE");
    f->SetCompressionLevel(1);     // 0 - no compression, 1..9 - min to max compression
-   f->SetCompressionAlgorithm(ROOT::kLZMA);  // ROOT::kZLIB, ROOT::kLZMA, ROOT::kLZ4
+   f->SetCompressionAlgorithm(compression_algorithm);  // ROOT::kZLIB, ROOT::kLZMA, ROOT::kLZ4
 
    // create the TTree
    auto tree = new TTree("RAM", datafile);
@@ -54,7 +68,14 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    // don't stream TObject info, but still nice to have a TObject derived class
    auto *r = new RAMRecord;
    r->SetBit(quality_policy);
-   tree->Branch("RAMRecord.", &r, 64000, 99);
+
+   // Select split level
+   int splitlevel = 0;
+   if(split){
+      splitlevel = 99;
+   }
+
+   tree->Branch("RAMRecord.", &r, 64000, splitlevel);
 
    int nlines = 0;
    int nrecords = 0;
