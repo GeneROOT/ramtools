@@ -1,7 +1,7 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
           tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
           tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
-          tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--macro MACRO] [-f FILE] [--path PATH]...
+          tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO] [-f FILE] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -22,6 +22,7 @@ Options:
   -f FILE               Custom rootfile for the provided genome
   --no-split            Reduce Splitlevel for banches
   -c, --compression ALG Compression algorithm of choice
+  -s, --stats           Print TTreeStats to file
 """
 import os
 import random
@@ -162,8 +163,14 @@ if __name__ == '__main__':
 
                 ramtools_cmd = [
                     "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                    "root", "-q", "-l", "-b", "{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)
+                    "root", "-q", "-l", "-b"
                 ]
+
+                if not arguments['--stats']:
+                    ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)]
+                else:
+                    ttreeperffile = logfile + '.root'
+                    ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
 
                 print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                 with open(logfile + ".log", 'w') as f:
