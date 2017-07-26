@@ -12,10 +12,11 @@
 #include <TFile.h>
 #include <TEventList.h>
 #include <TStopwatch.h>
+#include <TTreePerfStats.h>
 
 #include "ramrecord.h"
 
-void ramview(const char *file, const char *query)
+void ramview(const char *file, const char *query, bool perfstats=false, const char* perfstatsfilename="perf.root")
 {
 
    TStopwatch stopwatch;
@@ -25,6 +26,13 @@ void ramview(const char *file, const char *query)
    auto f = TFile::Open(file);
    auto t = (TTree *)f->Get("RAM");
    RAMRecord *r = 0;
+
+   TTreePerfStats *ps;
+
+   if(perfstats){
+      ps = new TTreePerfStats("ioperf", t);
+   }
+
 
    t->SetBranchAddress("RAMRecord.", &r);
 
@@ -111,4 +119,11 @@ void ramview(const char *file, const char *query)
    }
 
    stopwatch.Print();
+
+   if(perfstats){
+      ps->SaveAs(perfstatsfilename);
+      delete ps;
+   }
+
+  
 }
