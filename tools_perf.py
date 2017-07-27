@@ -1,5 +1,5 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
-          tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] [--reauth] SAMFILE ROOTFILE
           tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
           tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO] [-f FILE] [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
@@ -23,6 +23,7 @@ Options:
   --no-split            Reduce Splitlevel for banches
   -c, --compression ALG Compression algorithm of choice
   -s, --stats           Print TTreeStats to file
+  --reauth              Reauthorize token
 """
 import os
 import random
@@ -89,18 +90,33 @@ if __name__ == '__main__':
         split = "false" if arguments['--no-split'] else "true"
         compression = arguments['--compression'] if arguments['--compression'] else "kLZMA"
 
-        logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], 'split' if split == 'true' else 'nosplit', compression)
+        logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], compression, 'split' if split == 'true' else 'nosplit')
         logfile = os.path.join(outfolder, logfile)
 
-        ramtools_cmd = [
+        samtoram_cmd = [
             "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
             "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, \"{3}\")".format(samfile, rootfile, split, compression,
                                                                                              compilation_flag)
         ]
 
+        if arguments['--reauth']:
+            samtoram_cmd = ["k5reauth", "-p", "jjgonzal", '-k', "$HOME/jjgonzal.keytab", "--"] + samtoram_cmd
+
+        print(" ".join(samtoram_cmd))
+        print("\nIs this the command you want yo issue [y/N]\n")
+        while(True):
+            choice = input().lower()
+
+            if choice == 'y':
+                break
+            elif choice == 'n':
+                sys.exit(1)
+            else:
+                print("Invalid Choice [y/N]")
+
         print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         with open(logfile + ".log", 'w') as f:
-            processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+            processes.append(subprocess.Popen(samtoram_cmd, stdout=f))
 
     elif arguments['run']:
         df = pd.read_csv(arguments['VIEWS'])
