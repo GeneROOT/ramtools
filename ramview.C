@@ -10,7 +10,6 @@
 #include <TBranch.h>
 #include <TTree.h>
 #include <TFile.h>
-#include <TEventList.h>
 #include <TStopwatch.h>
 #include <TTreePerfStats.h>
 
