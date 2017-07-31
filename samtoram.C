@@ -26,6 +26,18 @@ void stripcrlf(char *tok)
    }
 }
 
+// DJB2 hash for char*
+UInt_t hash(unsigned char *str)
+{
+    UInt_t hash = 5381;
+    int c;
+
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
+}
+
 
 void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
               bool split = true, const char *compression = "kLZMA",
@@ -110,6 +122,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
             // rname
             if (ntok == 2)
                r->SetRNAME(tok);
+               r->SetRNAMEHASH(hash(tok));
 
             // pos
             if (ntok == 3)
@@ -163,6 +176,9 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       }
       nlines++;
    }
+
+   tree->BuildIndex("v_rnamehash", "v_pos");
+   
    tree->Print();
    tree->Write();
 
