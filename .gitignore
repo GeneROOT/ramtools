@@ -13,3 +13,7 @@ tmp/
 *.d
 *.pcm
 *.cxx_tmp
+*.fq
+*.bk
+*.rootix
+*.sam
