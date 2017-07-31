@@ -24,14 +24,19 @@ def get_metric(df, column, regions):
 
 def compare_metrics(df, methods, regions, column, save=False):
     plt.figure(figsize=(25, 6))
+
     dfs = [df[df['method'] == m] for m in methods]
     metrics = [get_metric(d, column, regions) for d in dfs]
+
     x = np.arange(len(regions))
     N = len(methods) + 1
+
     for i, (m, method) in enumerate(zip(metrics, methods)):
         plt.bar(x+1/N*i, m, width=1/N, label=method)
+
     plt.title(column, fontsize=25)
     plt.legend(fontsize=16)
+
     if save:
         plt.savefig("images/{0}.png".format(column), format='png')
 #     plt.yscale('log')
