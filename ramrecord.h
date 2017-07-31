@@ -27,6 +27,7 @@ private:
    TString         v_qname;          // Query template NAME
    UShort_t        v_flag;           // Bitwise FLAG
    TString         v_rname;          // Reference sequence NAME
+   UInt_t          v_rnamehash;      //   hashed version of RNAME for indexing
    UInt_t          v_pos;            // 1-based left most mapping POSition
    UChar_t         v_mapq;           // MAPing Quality
    Int_t           v_ncigar_op;      // Number of CIGAR operands
@@ -55,6 +56,7 @@ public:
    void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
    void SetRNAME(const char *rname) { v_rname = rname; }
+   void SetRNAMEHASH(UInt_t rnamehash) { v_rnamehash = rnamehash; }
    void SetPOS(UInt_t pos) { v_pos = pos; }
    void SetMAPQ(UChar_t mapq) { v_mapq = mapq; }
    void SetCIGAR(const char *cigar);
@@ -69,6 +71,7 @@ public:
    const char *GetQNAME() const { return v_qname; }
    UInt_t      GetFLAG() const { return v_flag; }
    const char *GetRNAME() const { return v_rname; }
+   UInt_t      GetRNAMEHASH() const {return v_rnamehash; }
    UInt_t      GetPOS() const { return v_pos; }
    UInt_t      GetMAPQ() const { return v_mapq; }
    Int_t       GetNCIGAROP() { return v_ncigar_op; }
