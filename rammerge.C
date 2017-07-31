@@ -25,6 +25,7 @@ void rammerge(const char* outfile, const char* infile1, const char* infile2){
    
     TFile *out = new TFile(outfile,"RECREATE");
     TTree *newtree = TTree::MergeTrees(list);
+    newtree->SetMaxTreeSize(500000000000LL);  // Default is 100GB, change to 500GB
     newtree->SetName("RAM");
     newtree->Write();
 
