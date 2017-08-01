@@ -45,14 +45,20 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
 
    int rangeDelimiterPos = region.find("-");
 
-   UInt_t rangeStart = std::stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
-   UInt_t rangeEnd = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
+   UInt_t range_start = std::stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
+   UInt_t range_end   = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
 
 
    int hashed_rname = djb2_hash(rname);
 
-   Long64_t rnameStart =  t->GetEntryNumberWithBestIndex(hashed_rname, rangeStart);
-   t->GetEntry(rnameStart);
+   if(t->GetEntryWithIndex(rname) < 0){
+        std::cout << "RNAME " << rname << " not contained in file" << std::endl;
+        exit(1);
+   }
+
+   Long64_t start_entry =  t->GetEntryNumberWithBestIndex(hashed_rname, range_start);
+   Long64_t end_entry   =  t->GetEntryNumberWithBestIndex(hashed_rname, range_end);
+   t->GetEntry(start_entry);
 
 
    // Assume RNAME are chunked together
@@ -67,14 +73,14 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
 
    int posStart = -1;
 
-    for (int i = rnameStart; i < t->GetEntries(); i++) {
+    for (int i = start_entry; i < t->GetEntries(); i++) {
       t->GetEntry(i);
 
       // If the RNAME region ends
       if (!rname.EqualTo(r->GetRNAME())) {
          break;
       } else {
-         if (r->GetPOS() + r->GetSEQLEN() > rangeStart) {
+         if (r->GetPOS() + r->GetSEQLEN() > start_entry) {
             // Register first valid position for printing
             posStart = i;
             break;
