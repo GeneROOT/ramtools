@@ -100,7 +100,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
             // rname
             if (ntok == 2){
                r->SetRNAME(tok);
-               r->SetRNAMEHASH(TString::Hash(tok, sizeof(void*)));
+               r->SetRNAMEHASH(TString::Hash(tok, std::strlen(tok)));
             }
             // pos
             if (ntok == 3)
