@@ -50,7 +50,7 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
     UInt_t range_end   = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
 
     // Look into the TTree Index
-    UInt_t hashed_rname = TString::Hash(rname, 0);
+    UInt_t hashed_rname = TString::Hash(rname, sizeof(void*));
     Long64_t start_entry =  t->GetEntryNumberWithBestIndex(hashed_rname, range_start);
     Long64_t end_entry   =  t->GetEntryNumberWithBestIndex(hashed_rname, range_end);
 
