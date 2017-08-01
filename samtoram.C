@@ -18,8 +18,7 @@
 
 
 void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
-              bool split = true, const char *compression = "kLZMA",
-              UInt_t quality_policy = RAMRecord::kPhred33)
+              bool split = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
 
@@ -32,18 +31,6 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    if (!fp) {
       printf("file %s not found\n", datafile);
       return;
-   }
-
-   // Select compression algorithm
-   ROOT::ECompressionAlgorithm compression_algorithm = ROOT::kLZMA;
-   if(std::strcmp(compression, "kLZMA") == 0){
-      compression_algorithm = ROOT::kLZMA;
-   }
-   else if(std::strcmp(compression, "kZLIB") == 0){
-      compression_algorithm = ROOT::kZLIB;
-   }
-   else{
-      std::cout << "Invalid algorithm " << compression << std::endl;
    }
 
    // open ROOT file
