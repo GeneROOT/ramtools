@@ -46,10 +46,10 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
 
    // Select compression algorithm
    ROOT::ECompressionAlgorithm compression_algorithm = ROOT::kLZMA;
-   if(std::strcmp(compression, "kLZMA")){
+   if(std::strcmp(compression, "kLZMA") == 0){
       compression_algorithm = ROOT::kLZMA;
    }
-   else if(std::strcmp(compression, "kZLIB")){
+   else if(std::strcmp(compression, "kZLIB") == 0){
       compression_algorithm = ROOT::kZLIB;
    }
    else{
