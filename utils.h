@@ -6,8 +6,6 @@
 
 
 void stripcrlf(char *tok);
-UInt_t djb2_hash(const char *str);
-
 
 void stripcrlf(char *tok)
 {
@@ -18,16 +16,4 @@ void stripcrlf(char *tok)
       else
          tok[l-1] = '\0';
    }
-}
-
-// DJB2 hash for char*
-UInt_t djb2_hash(const char *str)
-{
-    UInt_t hash = 5381;
-    int c;
-
-    while ((c = *str++))
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-    return hash;
 }

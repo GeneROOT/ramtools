@@ -9,6 +9,7 @@
 #include <TFile.h>
 #include <TClass.h>
 #include <TStopwatch.h>
+#include <TString.h>
 #include <Compression.h>
 #include <cstring>
 
@@ -99,7 +100,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
             // rname
             if (ntok == 2){
                r->SetRNAME(tok);
-               r->SetRNAMEHASH(djb2_hash(tok));
+               r->SetRNAMEHASH(TString::Hash(tok, 0));
             }
             // pos
             if (ntok == 3)
