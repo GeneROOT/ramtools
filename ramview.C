@@ -26,7 +26,7 @@ void ramview(const char *file, const char *query, bool perfstats=false, const ch
    auto t = (TTree *)f->Get("RAM");
    RAMRecord *r = 0;
 
-   TTreePerfStats *ps;
+   TTreePerfStats *ps = 0;
 
    if(perfstats){
       ps = new TTreePerfStats("ioperf", t);

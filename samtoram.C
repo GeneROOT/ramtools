@@ -9,22 +9,12 @@
 #include <TFile.h>
 #include <TClass.h>
 #include <TStopwatch.h>
+#include <TString.h>
 #include <Compression.h>
 #include <cstring>
 
 #include "ramrecord.h"
-
-
-void stripcrlf(char *tok)
-{
-   int l = strlen(tok);
-   if (l > 0 && tok[l-1] == '\n') {
-      if (l > 1 && tok[l-2] == '\r')
-         tok[l-2] = '\0';
-      else
-         tok[l-1] = '\0';
-   }
-}
+#include "utils.h"
 
 
 void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
@@ -108,9 +98,10 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
                r->SetFLAG(atoi(tok));
 
             // rname
-            if (ntok == 2)
+            if (ntok == 2){
                r->SetRNAME(tok);
-
+               r->SetRNAMEHASH(TString::Hash(tok, std::strlen(tok)));
+            }
             // pos
             if (ntok == 3)
                r->SetPOS(atoi(tok));
@@ -163,6 +154,9 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       }
       nlines++;
    }
+
+   tree->BuildIndex("v_rnamehash", "v_pos");
+
    tree->Print();
    tree->Write();
 
