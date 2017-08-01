@@ -1,4 +1,4 @@
-"""Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE...
+"""Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
           tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] [--reauth] SAMFILE ROOTFILE
           tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
           tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO] [-f FILE] [--path PATH]...
@@ -44,9 +44,6 @@ if __name__ == '__main__':
 
     compilation_flag = '+' if not arguments['-N'] else ''
 
-    outfolder = arguments['--out'] if arguments['--out'] else '.'
-    os.makedirs(outfolder, exist_ok=True)
-
     processes = []
 
     if arguments['generate']:
@@ -59,7 +56,7 @@ if __name__ == '__main__':
         if outfile is not None:
             if not os.path.isfile(outfile):
                 with open(outfile, 'w') as f:
-                    print(",genome,rname,start,end", file=f)
+                    print(",rname,start,end", file=f)
             else:
                 df = pd.read_csv(outfile)
                 offset = df.index.max() + 1
@@ -69,130 +66,133 @@ if __name__ == '__main__':
         else:
             outfile = sys.stdout
 
-        tables = {table[:-len('.root.idx')]: pd.read_csv(table) for table in arguments['GENOMETABLE']}
+        table = pd.read_csv(arguments['GENOMETABLE'])
+        table = table[~table['RNAME'].str.startswith('GL')]
+        table = table[~table['RNAME'].str.startswith('*')]
 
         for i in range(N):
-            genome = random.choice(list(tables.keys()))
-            table = tables[genome]
-            table = table[~table['RNAME'].str.startswith('GL')]
             row = table.ix[random.choice(table.index)]
             rname = row['RNAME']
             a, b = random.randint(row['beginPOS'], row['endPOS']), random.randint(row['beginPOS'], row['endPOS'])
             a, b = min(a, b), max(a, b)
-            print("{0},{1},{2},{3},{4}".format(i+offset, genome, rname, a, b), file=outfile)
+            print("{0},{1},{2},{3}".format(i+offset, rname, a, b), file=outfile)
 
-    elif arguments['convert']:
-        samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
+    else:
+        outfolder = arguments['--out'] if arguments['--out'] else '.'
+        os.makedirs(outfolder, exist_ok=True)
 
-        samfile = arguments['SAMFILE']
-        rootfile = arguments['ROOTFILE']
+        if arguments['convert']:
+            samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
 
-        split = "false" if arguments['--no-split'] else "true"
-        compression = arguments['--compression'] if arguments['--compression'] else "kLZMA"
+            samfile = arguments['SAMFILE']
+            rootfile = arguments['ROOTFILE']
 
-        logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], compression, 'split' if split == 'true' else 'nosplit')
-        logfile = os.path.join(outfolder, logfile)
+            split = "false" if arguments['--no-split'] else "true"
+            compression = arguments['--compression'] if arguments['--compression'] else "kLZMA"
 
-        samtoram_cmd = [
-            "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-            "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, \"{3}\")".format(samfile, rootfile, split, compression,
-                                                                                             compilation_flag)
-        ]
+            logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], compression, 'split' if split == 'true' else 'nosplit')
+            logfile = os.path.join(outfolder, logfile)
 
-        if arguments['--reauth']:
-            samtoram_cmd = ["k5reauth", "-p", "jjgonzal", '-k', "$HOME/jjgonzal.keytab", "--"] + samtoram_cmd
+            samtoram_cmd = [
+                "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, \"{3}\")".format(samfile, rootfile, split, compression,
+                                                                                                 compilation_flag)
+            ]
 
-        print(" ".join(samtoram_cmd))
-        print("\nIs this the command you want yo issue [y/N]\n")
-        while(True):
-            choice = input().lower()
+            if arguments['--reauth']:
+                samtoram_cmd = ["k5reauth", "-p", "jjgonzal", '-k', "$HOME/jjgonzal.keytab", "--"] + samtoram_cmd
 
-            if choice == 'y':
-                break
-            elif choice == 'n':
-                sys.exit(1)
-            else:
-                print("Invalid Choice [y/N]")
+            print(" ".join(samtoram_cmd))
+            print("\nIs this the command you want yo issue [y/N]\n")
+            while(True):
+                choice = input().lower()
 
-        print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-        with open(logfile + ".log", 'w') as f:
-            processes.append(subprocess.Popen(samtoram_cmd, stdout=f))
-
-    elif arguments['run']:
-        df = pd.read_csv(arguments['VIEWS'])
-
-        if arguments['RANGE']:
-            df = df.ix[rangestr2list(arguments['RANGE'])]
-
-        arguments['--path'] = ['.'] + arguments['--path']
-
-        for index, row in df.iterrows():
-
-            region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
-
-            if arguments['samview']:
-
-                bamfile = "{0}.bam".format(row['genome'])
-
-                if not os.path.isfile(bamfile):
-                    for path in arguments['--path']:
-                        real_bamfile = os.path.join(path, bamfile)
-                        if os.path.isfile(real_bamfile):
-                            bamfile = real_bamfile
-                            break
-                    else:
-                        print("Could not find {0}".format(bamfile))
-                        sys.exit(1)
-
-                logfile = "samtools_{0}_{1}".format(row['genome'], region)
-                logfile = os.path.join(outfolder, logfile)
-
-                samtools_cmd = [
-                    "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                    "samtools", "view", bamfile, region
-                ]
-
-                print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                with open(logfile + ".log", 'w') as f:
-                    processes.append(subprocess.Popen(samtools_cmd, stdout=f))
-
-            elif arguments['ramview']:
-
-                rootfile = "{0}.root".format(row['genome'])
-                if arguments['-f']:
-                    rootfile = arguments['-f']
-
-                if not os.path.isfile(rootfile):
-                    for path in arguments['--path']:
-                        real_ramfile = os.path.join(path, rootfile)
-                        if os.path.isfile(real_ramfile):
-                            rootfile = real_ramfile
-                            break
-                    else:
-                        print("Could not find {0}".format(rootfile))
-                        sys.exit(1)
-
-                logfile = "ramtools_{0}_{1}".format(row['genome'], region)
-                logfile = os.path.join(outfolder, logfile)
-
-                ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"
-
-                ramtools_cmd = [
-                    "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                    "root", "-q", "-l", "-b"
-                ]
-
-                if not arguments['--stats']:
-                    ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)]
+                if choice == 'y':
+                    break
+                elif choice == 'n':
+                    sys.exit(1)
                 else:
-                    ttreeperffile = logfile + '.root'
-                    ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
+                    print("Invalid Choice [y/N]")
 
-                print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                with open(logfile + ".log", 'w') as f:
-                    processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+            print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            with open(logfile + ".log", 'w') as f:
+                processes.append(subprocess.Popen(samtoram_cmd, stdout=f))
 
-            if not arguments['-P']:
-                exit_codes = [p.wait() for p in processes]
+        elif arguments['run']:
+            df = pd.read_csv(arguments['VIEWS'])
 
-        exit_codes = [p.wait() for p in processes]
+            if arguments['RANGE']:
+                df = df.ix[rangestr2list(arguments['RANGE'])]
+
+            arguments['--path'] = ['.'] + arguments['--path']
+
+            for index, row in df.iterrows():
+
+                region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
+
+                if arguments['samview']:
+
+                    bamfile = "{0}.bam".format(row['genome'])
+
+                    if not os.path.isfile(bamfile):
+                        for path in arguments['--path']:
+                            real_bamfile = os.path.join(path, bamfile)
+                            if os.path.isfile(real_bamfile):
+                                bamfile = real_bamfile
+                                break
+                        else:
+                            print("Could not find {0}".format(bamfile))
+                            sys.exit(1)
+
+                    logfile = "samtools_{0}_{1}".format(row['genome'], region)
+                    logfile = os.path.join(outfolder, logfile)
+
+                    samtools_cmd = [
+                        "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                        "samtools", "view", bamfile, region
+                    ]
+
+                    print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    with open(logfile + ".log", 'w') as f:
+                        processes.append(subprocess.Popen(samtools_cmd, stdout=f))
+
+                elif arguments['ramview']:
+
+                    rootfile = "{0}.root".format(row['genome'])
+                    if arguments['-f']:
+                        rootfile = arguments['-f']
+
+                    if not os.path.isfile(rootfile):
+                        for path in arguments['--path']:
+                            real_ramfile = os.path.join(path, rootfile)
+                            if os.path.isfile(real_ramfile):
+                                rootfile = real_ramfile
+                                break
+                        else:
+                            print("Could not find {0}".format(rootfile))
+                            sys.exit(1)
+
+                    logfile = "ramtools_{0}_{1}".format(row['genome'], region)
+                    logfile = os.path.join(outfolder, logfile)
+
+                    ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"
+
+                    ramtools_cmd = [
+                        "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
+                        "root", "-q", "-l", "-b"
+                    ]
+
+                    if not arguments['--stats']:
+                        ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)]
+                    else:
+                        ttreeperffile = logfile + '.root'
+                        ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
+
+                    print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    with open(logfile + ".log", 'w') as f:
+                        processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+
+                if not arguments['-P']:
+                    exit_codes = [p.wait() for p in processes]
+
+            exit_codes = [p.wait() for p in processes]
