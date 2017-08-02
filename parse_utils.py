@@ -1,3 +1,7 @@
+import os
+import matplotlib.pyplot as plt
+import  numpy as np
+
 
 def load_perf_file(file, method=""):
     if method == "":
