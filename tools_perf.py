@@ -1,7 +1,7 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
-          tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] [--reauth] SAMFILE ROOTFILE
-          tools_perf.py run samview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--path PATH]...
-          tools_perf.py run ramview VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO] [-f FILE] [--path PATH]...
+          tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py run samview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER]  [--path PATH]...
+          tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO]  [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -11,6 +11,7 @@ Arguments:
   VIEWS        CSV file with genome, rname and region
   RANGE       Range in comma/dash separated value for the experiments to execute
   LOGFILE     Output of calling the tools_perf run on a set of files
+  FILE        Custom rootfile for the provided genome
 
 Options:
   -h --help
@@ -19,11 +20,9 @@ Options:
   -o, --out OUTFILE     File to save/append values, defaults to stdin
   -p, --path path       Additional paths to look for bam/root files
   --macro MACRO         Custom ramview macro to crossvalidate
-  -f FILE               Custom rootfile for the provided genome
   --no-split            Reduce Splitlevel for banches
   -c, --compression ALG Compression algorithm of choice
   -s, --stats           Print TTreeStats to file
-  --reauth              Reauthorize token
 """
 import os
 import random
@@ -41,7 +40,7 @@ def rangestr2list(s):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-
+    print(arguments)
     compilation_flag = '+' if not arguments['-N'] else ''
 
     processes = []
@@ -99,9 +98,6 @@ if __name__ == '__main__':
                                                                                                  compilation_flag)
             ]
 
-            if arguments['--reauth']:
-                samtoram_cmd = ["k5reauth", "-p", "jjgonzal", '-k', "$HOME/jjgonzal.keytab", "--"] + samtoram_cmd
-
             print(" ".join(samtoram_cmd))
             print("\nIs this the command you want yo issue [y/N]\n")
             while(True):
@@ -132,7 +128,7 @@ if __name__ == '__main__':
 
                 if arguments['samview']:
 
-                    bamfile = "{0}.bam".format(row['genome'])
+                    bamfile = arguments['FILE']
 
                     if not os.path.isfile(bamfile):
                         for path in arguments['--path']:
@@ -144,7 +140,7 @@ if __name__ == '__main__':
                             print("Could not find {0}".format(bamfile))
                             sys.exit(1)
 
-                    logfile = "samtools_{0}_{1}".format(row['genome'], region)
+                    logfile = "samtools_{0}_{1}".format(os.path.basename(bamfile), region)
                     logfile = os.path.join(outfolder, logfile)
 
                     samtools_cmd = [
@@ -158,9 +154,7 @@ if __name__ == '__main__':
 
                 elif arguments['ramview']:
 
-                    rootfile = "{0}.root".format(row['genome'])
-                    if arguments['-f']:
-                        rootfile = arguments['-f']
+                    rootfile = arguments['FILE']
 
                     if not os.path.isfile(rootfile):
                         for path in arguments['--path']:
@@ -172,7 +166,7 @@ if __name__ == '__main__':
                             print("Could not find {0}".format(rootfile))
                             sys.exit(1)
 
-                    logfile = "ramtools_{0}_{1}".format(row['genome'], region)
+                    logfile = "ramtools_{0}_{1}".format(os.path.basename(rootfile), region)
                     logfile = os.path.join(outfolder, logfile)
 
                     ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"
