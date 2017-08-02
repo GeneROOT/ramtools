@@ -3,15 +3,17 @@
           tools_perf.py run samview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER]  [--path PATH]...
           tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO]  [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
+          tools_perf.py parsetreestats TTREEPERFSTATS...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
 
 Arguments:
-  GENOMETABLE CSV file with name of genome and ranges for each RNAME
-  VIEWS        CSV file with genome, rname and region
-  RANGE       Range in comma/dash separated value for the experiments to execute
-  LOGFILE     Output of calling the tools_perf run on a set of files
-  FILE        Custom rootfile for the provided genome
+  GENOMETABLE       CSV file with name of genome and ranges for each RNAME
+  VIEWS             CSV file with genome, rname and region
+  RANGE             Range in comma/dash separated value for the experiments to execute
+  LOGFILE           Output of calling the tools_perf run on a set of files
+  FILE              Custom rootfile for the provided genome
+  TTREEPERFSTATS    File with TTreePerfStats
 
 Options:
   -h --help
@@ -40,7 +42,6 @@ def rangestr2list(s):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    print(arguments)
     compilation_flag = '+' if not arguments['-N'] else ''
 
     processes = []
@@ -113,6 +114,19 @@ if __name__ == '__main__':
             print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             with open(logfile + ".log", 'w') as f:
                 processes.append(subprocess.Popen(samtoram_cmd, stdout=f))
+
+        elif arguments['parsetreestats']:
+            for file in arguments['TTREEPERFSTATS']:
+                textfile = os.path.splitext(file)[0] + ".treeperf"
+                imagefile = os.path.splitext(file)[0] + ".png"
+
+                parsetreestats_cmd = [
+                    "root", "-q", "-l", "-b", 'parsetreestats.C+("{0}", true, "{1}")'.format(file, imagefile)
+                ]
+
+                print("[{1}] Executing parsetreestats on {0}".format(file, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                with open(textfile, 'w') as f:
+                    processes.append(subprocess.Popen(parsetreestats_cmd, stdout=f))
 
         elif arguments['run']:
             df = pd.read_csv(arguments['VIEWS'])
