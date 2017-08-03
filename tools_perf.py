@@ -154,7 +154,7 @@ if __name__ == '__main__':
                             print("Could not find {0}".format(bamfile))
                             sys.exit(1)
 
-                    logfile = "samtools_{0}_{1}".format(os.path.basename(bamfile), region)
+                    logfile = "samtools__{0}__{1}".format(os.path.basename(bamfile), region)
                     logfile = os.path.join(outfolder, logfile)
 
                     samtools_cmd = [
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                             print("Could not find {0}".format(rootfile))
                             sys.exit(1)
 
-                    logfile = "ramtools_{0}_{1}".format(os.path.basename(rootfile), region)
+                    logfile = "ramtools__{0}__{1}".format(os.path.basename(rootfile), region)
                     logfile = os.path.join(outfolder, logfile)
 
                     ramview_macro = arguments['--macro'] if arguments['--macro'] else "ramview.C"

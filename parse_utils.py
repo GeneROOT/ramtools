@@ -1,6 +1,6 @@
 import os
 import matplotlib.pyplot as plt
-import  numpy as np
+import numpy as np
 
 
 def load_perf_file(file, method=""):
@@ -10,8 +10,8 @@ def load_perf_file(file, method=""):
     with open(file, 'r') as f:
         s = f.read()
 
-    genome = os.path.basename(file).split('_')[1]
-    region = os.path.basename(file).split('_')[2].split('.perf')[0]
+    genome = os.path.basename(file).split('__')[1]
+    region = os.path.basename(file).split('__')[2].split('.perf')[0]
 
     lines = s.split('\n')
     usertime = float(lines[1].split(': ')[1])
@@ -19,14 +19,16 @@ def load_perf_file(file, method=""):
     cpu_usage = float(lines[3].split(': ')[1].split('%')[0])
     memory = int(lines[9].split(': ')[1].split('%')[0])
 
-    return [genome, method, region, usertime, systemtime, cpu_usage, memory]
+    filesize = os.stat(file.replace('.perf', '.log')).st_size
+
+    return [genome, method, region, usertime, systemtime, cpu_usage, memory, filesize]
 
 
 def get_metric(df, column, regions):
     return np.array([df[df['region'] == r][column].values for r in regions])
 
 
-def compare_metrics(df, methods, regions, column, save=False):
+def compare_metrics(df, methods, regions, column, save=False, relative=None, log=False):
     plt.figure(figsize=(25, 6))
 
     dfs = [df[df['method'] == m] for m in methods]
@@ -36,11 +38,18 @@ def compare_metrics(df, methods, regions, column, save=False):
     N = len(methods) + 1
 
     for i, (m, method) in enumerate(zip(metrics, methods)):
-        plt.bar(x+1/N*i, m, width=1/N, label=method)
+        if relative is None:
+            plt.bar(x+1/N*i, m, width=1/N, label=method)
+        else:
+            plt.bar(x+1/N*i, m/metrics[relative], width=1/N, label=method)
+        # print(method, m)
 
+    plt.xticks(x, regions, rotation=15)
     plt.title(column, fontsize=25)
     plt.legend(fontsize=16)
 
+    if log:
+        plt.yscale('log')
+
     if save:
         plt.savefig("images/{0}.png".format(column), format='png')
-#     plt.yscale('log')
