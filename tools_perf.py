@@ -1,7 +1,7 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
           tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
-          tools_perf.py run samview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER]  [--path PATH]...
-          tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--out FOLDER] [--stats] [--macro MACRO]  [--path PATH]...
+          tools_perf.py run samview FILE VIEWS [RANGE] [-P] [-N] [--io] [--out FOLDER]  [--path PATH]...
+          tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--io] [--out FOLDER] [--stats] [--macro MACRO]  [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
           tools_perf.py parsetreestats TTREEPERFSTATS...
 
@@ -170,6 +170,9 @@ if __name__ == '__main__':
                         "samtools", "view", bamfile, region
                     ]
 
+                    if arguments['--io']:
+                        samtoram_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtoram_cmd
+
                     print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     with open(logfile + ".log", 'w') as f:
                         processes.append(subprocess.Popen(samtools_cmd, stdout=f))
@@ -203,6 +206,9 @@ if __name__ == '__main__':
                     else:
                         ttreeperffile = logfile + '.root'
                         ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
+
+                    if arguments['--io']:
+                        samtoram_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtoram_cmd
 
                     print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     with open(logfile + ".log", 'w') as f:
