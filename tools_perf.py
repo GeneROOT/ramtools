@@ -171,7 +171,7 @@ if __name__ == '__main__':
                     ]
 
                     if arguments['--io']:
-                        samtoram_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtoram_cmd
+                        samtools_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtools_cmd
 
                     print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     with open(logfile + ".log", 'w') as f:
@@ -208,7 +208,7 @@ if __name__ == '__main__':
                         ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
 
                     if arguments['--io']:
-                        samtoram_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtoram_cmd
+                        ramtools_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + ramtools_cmd
 
                     print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     with open(logfile + ".log", 'w') as f:
