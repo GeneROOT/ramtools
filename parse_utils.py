@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 
 
 def load_perf_file(file, method=""):
@@ -53,3 +54,29 @@ def compare_metrics(df, methods, regions, column, save=False, relative=None, log
 
     if save:
         plt.savefig("images/{0}.png".format(column), format='png')
+
+
+def load_samtoram_perf(file, method=''):
+
+    with open(file, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    if method == '':
+        method = os.path.basename(lines[0].split(', ')[1])
+
+    usertime = float(lines[1].split(': ')[1])
+    systemtime = float(lines[2].split(': ')[1])
+    cpu_usage = float(lines[3].split(': ')[1].split('%')[0])
+    memory = int(lines[9].split(': ')[1].split('%')[0])
+
+    logfile = file.replace('.perf', '.log')
+
+    with open(logfile, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    filesize = int(lines[4].split(' = ')[-1].strip(' *'))
+    compression = float(lines[5].split(' = ')[-1].strip(' *'))
+
+    return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
