@@ -63,7 +63,7 @@ def load_samtoram_perf(file, method=''):
     lines = s.split('\n')
 
     if method == '':
-        method = os.path.basename(lines[0].split(', ')[1])
+        method = os.path.basename(lines[0].split(', ')[1]).strip(' "')
 
     usertime = float(lines[1].split(': ')[1])
     systemtime = float(lines[2].split(': ')[1])
@@ -78,5 +78,32 @@ def load_samtoram_perf(file, method=''):
 
     filesize = int(lines[4].split(' = ')[-1].strip(' *'))
     compression = float(lines[5].split(' = ')[-1].strip(' *'))
+
+    return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
+
+
+def load_samtobam_perf(file, method=''):
+
+    with open(file, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    if method == '':
+        method = lines[0].split(' ')[-1].strip(' "').replace('.sam', '.bam')
+
+    usertime = float(lines[1].split(': ')[1])
+    systemtime = float(lines[2].split(': ')[1])
+    cpu_usage = float(lines[3].split(': ')[1].split('%')[0])
+    memory = int(lines[9].split(': ')[1].split('%')[0])
+
+    logfile = file.replace('.perf', '.log')
+
+    with open(logfile, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    filesize = int(lines[1].split('\t')[0].split(': ')[1])
+    filesize_org = int(lines[10].split('\t')[0].split(': ')[1])
+    compression = filesize_org / filesize
 
     return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
