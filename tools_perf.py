@@ -40,6 +40,14 @@ def rangestr2list(s):
                 if '-' in i else [int(i)]) for i in s.split(',')), [])
 
 
+def clear_buffer_cache():
+    code = subprocess.call(['sudo', 'sh', '-c', "echo 3 > /proc/sys/vm/drop_caches"])
+    if code == 0:
+        return
+    else:
+        print(code)
+        sys.exit(1)
+
 if __name__ == '__main__':
     arguments = docopt(__doc__)
     compilation_flag = '+' if not arguments['-N'] else ''
@@ -202,5 +210,6 @@ if __name__ == '__main__':
 
                 if not arguments['-P']:
                     exit_codes = [p.wait() for p in processes]
+                    clear_buffer_cache()
 
             exit_codes = [p.wait() for p in processes]
