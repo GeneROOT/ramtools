@@ -122,6 +122,7 @@ void ramview(const char *file, const char *query, bool perfstats=false, const ch
    if(perfstats){
       ps->SaveAs(perfstatsfilename);
       delete ps;
+      printf("Reading %lld bytes in %d transactions\n",f->GetBytesRead(),  f->GetReadCalls());
    }
 
   
