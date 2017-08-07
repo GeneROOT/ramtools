@@ -12,6 +12,7 @@
 #include <TFile.h>
 #include <TStopwatch.h>
 #include <TString.h>
+#include <TTreeIndex.h>
 #include <TTreePerfStats.h>
 
 #include "ramrecord.h"
@@ -27,6 +28,31 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
     auto f = TFile::Open(file);
     auto t = (TTree *)f->Get("RAM");
     RAMRecord *r = 0;
+
+    // Check for TTreeIndex in TTree, same file and external file (in that order)
+
+    auto i = t->GetTreeIndex();
+    if(!i){
+        i = (TTreeIndex *)f->Get("INDEX");
+        if(!i){
+            std::string indexfile = file;
+            indexfile.append(".rai");
+            std::FILE *fp = std::fopen(indexfile.c_str(), "r");
+            if (fp) {
+                auto f2 = TFile::Open(indexfile.c_str());
+                i = (TTreeIndex *)f2->Get("INDEX");
+                
+            }
+        }
+        if(i){
+            t->SetTreeIndex(i);
+        }
+    }
+
+    if(!t->GetTreeIndex()){
+        std::cout << "Index missing please call ramindex first" << std::endl;
+        exit(1);
+    }
 
     TTreePerfStats *ps = 0;
 
@@ -85,7 +111,7 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
        t->SetBranchStatus("RAMRecord.*", 1);
     }
 
-    for (Long64_t i = start_entry ; i < end_entry; i++) {
+    for (Long64_t i = start_entry ; i <= end_entry; i++) {
         t->GetEntry(i);
         r->Print();
     }
