@@ -1,37 +1,42 @@
 //
-// Index for a RAM and save it to another file
+// Index for a RAM and save it to same file or external one
 //
 // Author: Jose Javier Gonzalez Ortiz, 7/8/2017
 //
 
 #include <iostream>
+#include <cstring>
 
 #include <TTree.h>
 #include <TTreeIndex.h>
 #include <TFile.h>
 #include <TString.h>
 
-void ramindex(const char *file, const char *index_file, bool clone = true){
-    auto f = TFile::Open(file);
+#include "ramrecord.h"
+
+void ramindex(const char *file, bool update = true, std::string indexfile = ""){
+    auto f = TFile::Open(file, "UPDATE");
     auto t = (TTree *)f->Get("RAM");
 
-    t->BuildIndex("v_rname", "v_pos");
+    t->BuildIndex("v_rnamehash", "v_pos");
+    auto i  = t->GetTreeIndex();
 
-    if(clone){
-        auto index_f = TFile::Open(index_file, "RECREATE");
-        index_f->SetCompressionLevel(f->GetCompressionLevel());
-        index_f->SetCompressionAlgorithm(f->GetCompressionAlgorithm());
-        TTree *indexed_t = t->CloneTree();
-        indexed_t->Print();
-        index_f->Write();
+    if(update){
+        i->Write("INDEX");
     }
     else{
-        auto i  = t->GetTreeIndex();
-        if(!i){
-            std::out << "Incorrect Index" << std::endl;
-            exit(1);
+        if( indexfile.empty() ){
+            indexfile = file;
+            indexfile.append(".rai");
         }
+
+        auto index_f = TFile::Open(indexfile.c_str(), "RECREATE");
+        i->Write("INDEX");
+        delete index_f;
+        std:cout << "Saving in separate indexfile " << indexfile << std::endl;
     }
 
+    delete f;
+    std::cout << "Index generated for " << file << std::endl;
 
 }
