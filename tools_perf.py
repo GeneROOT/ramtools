@@ -144,6 +144,8 @@ if __name__ == '__main__':
 
             arguments['--path'] = ['.'] + arguments['--path']
 
+            clear_buffer_cache()
+
             for index, row in df.iterrows():
 
                 region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
