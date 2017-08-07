@@ -111,8 +111,15 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
        t->SetBranchStatus("RAMRecord.*", 1);
     }
 
-    for (Long64_t i = start_entry ; i <= end_entry; i++) {
-        t->GetEntry(i);
+    Long64_t j;
+    for ( j = start_entry ; j <= end_entry; j++) {
+        t->GetEntry(j);
+        r->Print();
+    }
+
+    t->GetEntry(j++);
+    while(r->GetPOS() <= range_end){
+        t->GetEntry(j++);
         r->Print();
     }
 
