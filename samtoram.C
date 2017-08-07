@@ -17,7 +17,7 @@
 #include "utils.h"
 
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
+void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root", bool index = true,
               bool split = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
@@ -26,7 +26,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    TStopwatch stopwatch;
    stopwatch.Start();
 
-   // open the SAM file
+   // open the SAM files
    FILE *fp = fopen(datafile, "r");
    if (!fp) {
       printf("file %s not found\n", datafile);
@@ -141,8 +141,9 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       }
       nlines++;
    }
-
-   tree->BuildIndex("v_rnamehash", "v_pos");
+   if(index){
+      tree->BuildIndex("v_rnamehash", "v_pos");
+   }
 
    tree->Print();
    tree->Write();
