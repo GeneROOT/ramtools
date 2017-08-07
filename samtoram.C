@@ -17,7 +17,7 @@
 #include "utils.h"
 
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root", bool index = true,
+void samtoram(const char *datafile = "samexample.sam", const char *treefile = "samexample.root", bool index = true,
               bool split = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.

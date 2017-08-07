@@ -62,6 +62,9 @@ def load_samtoram_perf(file, method=''):
         s = f.read()
     lines = s.split('\n')
 
+    if "Command exited" in lines[0]:
+        lines = lines[1:]
+
     if method == '':
         method = os.path.basename(lines[0].split(', ')[1]).strip(' "')
 
@@ -87,6 +90,9 @@ def load_samtobam_perf(file, method=''):
     with open(file, 'r') as f:
         s = f.read()
     lines = s.split('\n')
+
+    if "Command exited" in lines[0]:
+        lines = lines[1:]
 
     if method == '':
         method = lines[0].split(' ')[-1].strip(' "').replace('.sam', '.bam')
