@@ -65,7 +65,7 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
 
     UInt_t start_pos = range_start;
     while(start_entry == -1){
-        start_entry = t->GetEntryNumberWithBestIndex(start_pos++);
+        start_entry = t->GetEntry(start_pos++);
     }
 
     if(b->GetSplitLevel() > 0){
