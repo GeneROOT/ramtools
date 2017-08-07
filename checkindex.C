@@ -22,9 +22,15 @@ void checkindex(const char *file="samexample.root"){
     t->Print();
 
     auto i  = t->GetTreeIndex();
+    if(i){
+        std::cout << "INDEX PRESENT" << std::endl;
+        std::cout << i->GetMajorName() << std::endl;
+        std::cout << i->GetMinorName() << std::endl;
+    }
+    else{
+        std::cout << "INDEX MISSING" << std::endl;
+    }
 
-    std::cout << i->GetMajorName() << std::endl;
-    std::cout << i->GetMinorName() << std::endl;
     // i->Print();
 
     // std::cout << t->GetEntryNumberWithBestIndex(TString::Hash("chr1", std::strlen("chr1")), 10152) << std::endl;
