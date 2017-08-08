@@ -53,6 +53,55 @@ def clear_buffer_cache():
 def sudo_reauth():
     subprocess.call("while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &", shell=True)
 
+
+def find_file_in_paths(file, paths):
+    if not os.path.isfile(file):
+        for path in paths:
+            real_file = os.path.join(path, file)
+            if os.path.isfile(real_file):
+                return real_file
+        else:
+            print("Could not find {0}".format(file))
+            sys.exit(1)
+    else:
+        return file
+
+
+def lauch_and_save_output(cmd, outfile):
+    with open(outfile, 'w') as f:
+        processes.append(subprocess.Popen(cmd, stdout=f))
+
+
+def manual_check()cmd:
+    print(" ".join(cmd))
+    print("\nIs this the command you want yo issue [y/N]\n")
+    while(True):
+        choice = input().lower()
+
+        if choice == 'y':
+            break
+        elif choice == 'n':
+            sys.exit(1)
+        else:
+            print("Invalid Choice [y/N]")
+
+
+def print_timestamp():
+    print("[{0}] ".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')), end='')
+
+
+def wrap_root_cmd(cmd):
+    return ["root", "-q", "-l", "-b"] + cmd
+
+
+def wrap_time_cmd(cmd, time_logfile):
+    pass
+
+
+def wrap_io_cmd(cmd, io_logfile):
+    pass
+
+
 if __name__ == '__main__':
     arguments = docopt(__doc__)
     compilation_flag = '+' if not arguments['-N'] else ''
@@ -112,34 +161,11 @@ if __name__ == '__main__':
                                                                                              compilation_flag)
             ]
 
-            print(" ".join(samtoram_cmd))
-            print("\nIs this the command you want yo issue [y/N]\n")
-            while(True):
-                choice = input().lower()
+            manual_check(samtoram_cmd)
 
-                if choice == 'y':
-                    break
-                elif choice == 'n':
-                    sys.exit(1)
-                else:
-                    print("Invalid Choice [y/N]")
-
-            print("[{2}] Executing samtoram from {0} to {1}".format(samfile, rootfile, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            with open(logfile + ".log", 'w') as f:
-                processes.append(subprocess.Popen(samtoram_cmd, stdout=f))
-
-        elif arguments['parsetreestats']:
-            for file in arguments['TTREEPERFSTATS']:
-                textfile = os.path.splitext(file)[0] + ".treeperf"
-                imagefile = os.path.splitext(file)[0] + ".png"
-
-                parsetreestats_cmd = [
-                    "root", "-q", "-l", "-b", 'parsetreestats.C+("{0}", true, "{1}")'.format(file, imagefile)
-                ]
-
-                print("[{1}] Executing parsetreestats on {0}".format(file, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                with open(textfile, 'w') as f:
-                    processes.append(subprocess.Popen(parsetreestats_cmd, stdout=f))
+            print_timestamp()
+            print("Executing samtoram from {0} to {1}".format(samfile, rootfile))
+            lauch_and_save_output(samtoram_cmd, logfile + ".log")
 
         elif arguments['run']:
             df = pd.read_csv(arguments['VIEWS'])
@@ -159,17 +185,7 @@ if __name__ == '__main__':
 
                 if arguments['samview']:
 
-                    bamfile = arguments['FILE']
-
-                    if not os.path.isfile(bamfile):
-                        for path in arguments['--path']:
-                            real_bamfile = os.path.join(path, bamfile)
-                            if os.path.isfile(real_bamfile):
-                                bamfile = real_bamfile
-                                break
-                        else:
-                            print("Could not find {0}".format(bamfile))
-                            sys.exit(1)
+                    bamfile = find_file_in_paths(arguments['FILE'], arguments['--path'])
 
                     logfile = "samtools__{0}__{1}".format(os.path.basename(bamfile), region)
                     logfile = os.path.join(outfolder, logfile)
@@ -182,23 +198,14 @@ if __name__ == '__main__':
                     if arguments['--io']:
                         samtools_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + samtools_cmd
 
-                    print("[{2}] Executing samtools view on {0} {1}".format(bamfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    print_timestamp()
+                    print("Executing samtools view on {0} {1}".format(bamfile, region))
                     with open(logfile + ".log", 'w') as f:
                         processes.append(subprocess.Popen(samtools_cmd, stdout=f))
 
                 elif arguments['ramview']:
 
-                    rootfile = arguments['FILE']
-
-                    if not os.path.isfile(rootfile):
-                        for path in arguments['--path']:
-                            real_ramfile = os.path.join(path, rootfile)
-                            if os.path.isfile(real_ramfile):
-                                rootfile = real_ramfile
-                                break
-                        else:
-                            print("Could not find {0}".format(rootfile))
-                            sys.exit(1)
+                    rootfile = find_file_in_paths(arguments['FILE'], arguments['--path'])
 
                     logfile = "ramtools__{0}__{1}".format(os.path.basename(rootfile), region)
                     logfile = os.path.join(outfolder, logfile)
@@ -223,12 +230,25 @@ if __name__ == '__main__':
                     if arguments['--io']:
                         ramtools_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + ramtools_cmd
 
-                    print("[{2}] Executing ramtools view on {0} {1}".format(rootfile, region, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-                    with open(logfile + ".log", 'w') as f:
-                        processes.append(subprocess.Popen(ramtools_cmd, stdout=f))
+                    print_timestamp()
+                    print("Executing ramtools view on {0} {1}".format(rootfile, region))
+                    lauch_and_save_output(ramtools_cmd, logfile + '.log')
 
                 if not arguments['-P']:
                     exit_codes = [p.wait() for p in processes]
                     clear_buffer_cache()
 
             exit_codes = [p.wait() for p in processes]
+
+        elif arguments['parsetreestats']:
+            for file in arguments['TTREEPERFSTATS']:
+                textfile = os.path.splitext(file)[0] + ".treeperf"
+                imagefile = os.path.splitext(file)[0] + ".png"
+
+                parsetreestats_cmd = [
+                    "root", "-q", "-l", "-b", 'parsetreestats.C+("{0}", true, "{1}")'.format(file, imagefile)
+                ]
+
+                print_timestamp()
+                print("Executing parsetreestats on {0}".format(file))
+                lauch_and_save_output(textfile, parsetreestats_cmd)
