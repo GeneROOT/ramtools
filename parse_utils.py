@@ -2,6 +2,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import re
+from glob import glob
+import pandas as pd
 
 
 def load_perf_file(file, method=""):
@@ -82,7 +84,10 @@ def load_samtoram_perf(file, method=''):
     filesize = int(lines[4].split(' = ')[-1].strip(' *'))
     compression = float(lines[5].split(' = ')[-1].strip(' *'))
 
-    return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
+    file = method.split('_')[0]
+    method = "ramtools_" + method[len(file):].split('.root')[0]
+
+    return [file, method, usertime, systemtime, cpu_usage, memory, filesize, compression]
 
 
 def load_samtobam_perf(file, method=''):
@@ -112,7 +117,9 @@ def load_samtobam_perf(file, method=''):
     filesize_org = int(lines[10].split('\t')[0].split(': ')[1])
     compression = filesize_org / filesize
 
-    return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
+    file = method.split('.bam')[0]
+
+    return [file, 'samtools', usertime, systemtime, cpu_usage, memory, filesize, compression]
 
 
 def load_bamindex_perf(file, method=''):
@@ -140,7 +147,9 @@ def load_bamindex_perf(file, method=''):
 
     filesize = int(lines[1].split('\t')[0].split(': ')[1])
 
-    return [method, usertime, systemtime, cpu_usage, memory, filesize]
+    file = method.split('.bam')[0]
+
+    return [file, 'samtools', usertime, systemtime, cpu_usage, memory, filesize]
 
 
 def load_ramindex_perf(file, method=''):
@@ -168,4 +177,39 @@ def load_ramindex_perf(file, method=''):
 
     filesize = int(lines[3].split('\t')[0].split(': ')[1])
 
-    return [method, usertime, systemtime, cpu_usage, memory, filesize]
+    file = method.split('_')[0]
+    method = "ramtools_" + method[len(file):].split('.root')[0]
+
+    return [file, method, usertime, systemtime, cpu_usage, memory, filesize]
+
+
+def load_samtoram_folder(folder):
+    perfs = []
+    for file in glob('{0}/samtoram*.perf'.format(folder)):
+        print(file)
+        perfs += [load_samtoram_perf(file)]
+
+    for file in glob('{0}/samtobam*.perf'.format(folder)):
+        print(file)
+        perfs += [load_samtobam_perf(file)]
+
+    columns = ['file', 'method', 'usertime', 'systemtime', 'cpu_usage', 'memory', 'filesize', 'compression']
+    df = pd.DataFrame(data=perfs, columns=columns)
+    df['size_GB'] = df['filesize']/(1024**3)
+    return df
+
+
+def load_index_folder(folder):
+    perfs = []
+    for file in glob('{0}/ramindex*.perf'.format(folder)):
+        print(file)
+        perfs += [load_ramindex_perf(file)]
+
+    for file in glob('{0}/bamindex*.perf'.format(folder)):
+        print(file)
+        perfs += [load_bamindex_perf(file)]
+
+    columns = ['file', 'method', 'usertime', 'systemtime', 'cpu_usage', 'memory', 'filesize']
+    df = pd.DataFrame(data=perfs, columns=columns)
+    df['size_GB'] = df['filesize']/(1024**3)
+    return df
