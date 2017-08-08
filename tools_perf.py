@@ -1,4 +1,5 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
+          tools_perf.py convert bam [-iI] [--out OUTFILE] SAMFILE [BAMFILE]
           tools_perf.py convert ram [-iINrT] [-a ALG] [--out OUTFILE] SAMFILE ROOTFILE
           tools_perf.py view bam FILE VIEWS [-iIP] [--out OUTFOLDER] [RANGE]
           tools_perf.py view ram FILE VIEWS [-ciINPsT] [--out OUTFOLDER] [RANGE] [--macro MACRO]
@@ -145,7 +146,19 @@ if __name__ == '__main__':
         os.makedirs(outfolder, exist_ok=True)
 
         if arguments['convert']:
-            if arguments['ram']:
+            if arguments['bam']:
+
+                samfile = arguments['SAMFILE']
+                bamfile = arguments['BAMFILE'] if arguments['BAMFILE'] else arguments['SAMFILE'].replace('.sam', '.bam')
+
+                sam_basename = os.path.basename(samfile).split('.sam')[0]
+                logfile = "samtobam_{0}".format(sam_basename)
+                logfile = os.path.join(outfolder, logfile)
+
+                convert_cmd = ['samtools', 'view', '-bS', '-o', bamfile, samfile]
+                operation = "samtobam from {0} to {1}".format(samfile, bamfile)
+
+            elif arguments['ram']:
                 samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
 
                 samfile = arguments['SAMFILE']
@@ -163,16 +176,21 @@ if __name__ == '__main__':
                 logfile = "samtoram_{0}_{1}_{2}_{3}".format(sam_basename, compression_name, split_name, index_name)
                 logfile = os.path.join(outfolder, logfile)
 
-                samtoram_cmd = ['samtoram.C{5}("{0}", "{1}", {2}, {3}, {4})'.format(samfile, rootfile, index,
-                                                                                    split, compression, compilation_flag)]
-
-                samtoram_cmd = wrap_root_cmd(samtoram_cmd)
-                samtoram_cmd = wrap_time_cmd(samtoram_cmd, logfile + '.perf')
-                if arguments['--io']:
-                    samtoram_cmd = wrap_io_cmd(samtoram_cmd, logfile + '.io')
-
+                convert_cmd = ['samtoram.C{5}("{0}", "{1}", {2}, {3}, {4})'.format(samfile, rootfile, index,
+                                                                                   split, compression, compilation_flag)]
+                convert_cmd = wrap_root_cmd(convert_cmd)
                 operation = "samtoram from {0} to {1}".format(samfile, rootfile)
-                lauch_and_save_output(samtoram_cmd, logfile + ".log", operation, interactive=arguments['--interactive'])
+
+            convert_cmd = wrap_time_cmd(convert_cmd, logfile + '.perf')
+            if arguments['--io']:
+                convert_cmd = wrap_io_cmd(convert_cmd, logfile + '.io')
+
+            lauch_and_save_output(convert_cmd, logfile + ".log", operation, interactive=arguments['--interactive'])
+
+            if arguments['bam']:
+                with open(logfile + ".log", 'w') as f:
+                    print(subprocess.check_output(['stat', bamfile]).decode()[:-1], file=f)
+                    print(subprocess.check_output(['stat', samfile]).decode(), file=f)
 
         elif arguments['view']:
             df = pd.read_csv(arguments['VIEWS'])
