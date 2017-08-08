@@ -19,12 +19,12 @@ void ramindex(const char *file, bool update = true, std::string indexfile = ""){
     auto t = (TTree *)f->Get("RAM");
 
     t->BuildIndex("v_rnamehash", "v_pos");
-    auto i  = t->GetTreeIndex();
 
     if(update){
-        i->Write("INDEX");
+        t->Write();
     }
     else{
+        auto i  = t->GetTreeIndex();
         if( indexfile.empty() ){
             indexfile = file;
             indexfile.append(".rai");
@@ -38,5 +38,4 @@ void ramindex(const char *file, bool update = true, std::string indexfile = ""){
 
     delete f;
     std::cout << "Index generated for " << file << std::endl;
-
 }
