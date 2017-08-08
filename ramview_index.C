@@ -18,7 +18,7 @@
 #include "ramrecord.h"
 #include "utils.h"
 
-void ramview_index(const char *file, const char *query, bool perfstats=false, const char* perfstatsfilename="perf.root")
+void ramview_index(const char *file, const char *query, bool cache=false, bool perfstats=false, const char* perfstatsfilename="perf.root")
 {
 
     TStopwatch stopwatch;
@@ -28,6 +28,10 @@ void ramview_index(const char *file, const char *query, bool perfstats=false, co
     auto f = TFile::Open(file);
     auto t = (TTree *)f->Get("RAM");
     RAMRecord *r = 0;
+
+    if(!cache){
+        t->SetCacheSize(0);
+    }
 
     // Check for TTreeIndex in TTree and in external file (in that order)
 

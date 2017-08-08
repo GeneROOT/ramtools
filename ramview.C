@@ -15,7 +15,7 @@
 
 #include "ramrecord.h"
 
-void ramview(const char *file, const char *query, bool perfstats=false, const char* perfstatsfilename="perf.root")
+void ramview(const char *file, const char *query, bool cache=false, bool perfstats=false, const char* perfstatsfilename="perf.root")
 {
 
    TStopwatch stopwatch;
@@ -25,6 +25,10 @@ void ramview(const char *file, const char *query, bool perfstats=false, const ch
    auto f = TFile::Open(file);
    auto t = (TTree *)f->Get("RAM");
    RAMRecord *r = 0;
+
+   if(!cache){
+      t->SetCacheSize(0);
+   }
 
    TTreePerfStats *ps = 0;
 
