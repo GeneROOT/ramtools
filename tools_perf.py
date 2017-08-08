@@ -252,7 +252,7 @@ if __name__ == '__main__':
 
                 region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
-                file = arguments['FILE']
+                file = arguments['FILE'][0]
                 logfile = "OP__{0}__{1}".format(os.path.basename(file), region)
                 logfile = os.path.join(outfolder, logfile)
 
