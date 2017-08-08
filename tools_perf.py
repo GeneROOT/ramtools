@@ -1,7 +1,7 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
-          tools_perf.py convert [-I] [--no-split] [-c ALG] [-N] [--io] [--out OUTFILE] SAMFILE ROOTFILE
-          tools_perf.py view bam FILE VIEWS [-I] [RANGE] [-P] [-N] [--io] [--out FOLDER]  [--path PATH]...
-          tools_perf.py view ram FILE VIEWS [-I] [RANGE] [-P] [-N] [--io] [--out FOLDER] [--cache] [--stats] [--macro MACRO]  [--path PATH]...
+          tools_perf.py convert ram [-iINrT] [-a ALG] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py view bam FILE VIEWS [-iIP] [--out OUTFOLDER] [RANGE]
+          tools_perf.py view ram FILE VIEWS [-ciINPsT] [--out OUTFOLDER] [RANGE] [--macro MACRO]
           tools_perf.py parsetreestats TTREEPERFSTATS...
 
 Preprocessing and postprocessing for evaluating the performance of ramtools functions
@@ -16,16 +16,18 @@ Arguments:
 
 Options:
   -h --help
-  -n NUMBER             Amount of records to generate
-  -N                    Avoid compiling code
-  -I                    Interactive mode, prints commands before running them
+  -a, --alg ALG         Compression algorithm of choice
+  -c --cache            Enable TTreeCache
+  -i --interactive      Interactive mode, prints commands before running them
+  -I --io               Profile IO operations
+  -m, --macro MACRO     Custom ramview macro to crossvalidate
+  -n, --num NUMBER      Amount of records to generate
+  -N --no-compile       Avoid compiling code
   -o, --out OUTFILE     File to save/append values, defaults to stdin
-  -p, --path path       Additional paths to look for bam/root files
-  --macro MACRO         Custom ramview macro to crossvalidate
-  --no-split            Reduce Splitlevel for banches
-  -c, --compression ALG Compression algorithm of choice
-  -s, --stats           Print TTreeStats to file
-  --cache               Enable TTreeCache
+  -P, --parallel        Run scripts in parallel
+  -r --no-index         Convert as raw without index
+  -s --stats            Print TTreeStats to file
+  -T --no-split         Reduce Splitlevel for banches
 """
 import os
 import random
@@ -53,20 +55,7 @@ def clear_buffer_cache():
 
 
 def sudo_reauth():
-    subprocess.call("while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &", shell=True)
-
-
-def find_file_in_paths(file, paths):
-    if not os.path.isfile(file):
-        for path in paths:
-            real_file = os.path.join(path, file)
-            if os.path.isfile(real_file):
-                return real_file
-        else:
-            print("Could not find {0}".format(file))
-            sys.exit(1)
-    else:
-        return file
+    subprocess.call('while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &', shell=True)
 
 
 def lauch_and_save_output(cmd, outfile, operation=None, interactive=False):
@@ -85,7 +74,7 @@ def lauch_and_save_output(cmd, outfile, operation=None, interactive=False):
 
 def manual_check(cmd):
     print(" ".join(cmd))
-    print("\nIs this the command you want yo issue [y/N]\n")
+    print("\nIs this the command you want yo issue [y/N]")
     while(True):
         choice = input().lower()
 
@@ -98,7 +87,8 @@ def manual_check(cmd):
 
 
 def print_timestamp():
-    print("[{0}] ".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')), end='')
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print("[{0}] ".format(timestamp), end="")
 
 
 def wait_for_all(processes):
@@ -120,12 +110,11 @@ def wrap_io_cmd(cmd, io_logfile):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    compilation_flag = '+' if not arguments['-N'] else ''
-    arguments['--path'] = ['.'] + arguments['--path']
+    compilation_flag = '+' if not arguments['--no-compile'] else ''
 
     if arguments['generate']:
 
-        N = int(arguments['-n']) if arguments['-n'] else 10
+        N = int(arguments['--num']) if arguments['--num'] else 10
 
         outfile = arguments['--out'] if arguments['--out'] else None
 
@@ -156,28 +145,34 @@ if __name__ == '__main__':
         os.makedirs(outfolder, exist_ok=True)
 
         if arguments['convert']:
-            operation = "samtoram from {0} to {1}".format(samfile, rootfile)
-            samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
+            if arguments['ram']:
+                samtoram_macro = arguments['--macro'] if arguments['--macro'] else "samtoram.C"
 
-            samfile = arguments['SAMFILE']
-            rootfile = arguments['ROOTFILE']
+                samfile = arguments['SAMFILE']
+                rootfile = arguments['ROOTFILE']
 
-            split = "false" if arguments['--no-split'] else "true"
-            compression = arguments['--compression'] if arguments['--compression'] else "ROOT::kLZMA"
-            compression = compression.split('ROOT::')[1].lower()
+                split = "false" if arguments['--no-split'] else "true"
+                index = "false" if arguments['--no-index'] else "true"
+                compression = arguments['--alg'] if arguments['--alg'] else "ROOT::kLZMA"
 
-            logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], compression, 'split' if split == 'true' else 'nosplit')
-            logfile = os.path.join(outfolder, logfile)
+                split_name = 'split' if split == 'true' else 'nosplit'
+                index_name = 'index' if index == 'true' else 'noindex'
+                compression_name = compression.split('ROOT::k')[1].lower()
+                sam_basename = os.path.basename(samfile).split('.sam')[0]
 
-            samtoram_cmd = ["samtoram.C{4}(\"{0}\", \"{1}\", {2}, {3})".format(samfile, rootfile, split,
-                                                                               compression, compilation_flag)]
+                logfile = "samtoram_{0}_{1}_{2}_{3}".format(sam_basename, compression_name, split_name, index_name)
+                logfile = os.path.join(outfolder, logfile)
 
-            samtoram_cmd = wrap_root_cmd(samtoram_cmd)
-            samtoram_cmd = wrap_time_cmd(samtoram_cmd, logfile + '.perf')
-            if arguments['--io']:
-                samtoram_cmd = wrap_io_cmd(samtoram_cmd, logfile + '.io')
+                samtoram_cmd = ['samtoram.C{5}("{0}", "{1}", {2}, {3}, {4})'.format(samfile, rootfile, index,
+                                                                                    split, compression, compilation_flag)]
 
-            lauch_and_save_output(samtoram_cmd, logfile + ".log", operation, interactive=arguments['-I'])
+                samtoram_cmd = wrap_root_cmd(samtoram_cmd)
+                samtoram_cmd = wrap_time_cmd(samtoram_cmd, logfile + '.perf')
+                if arguments['--io']:
+                    samtoram_cmd = wrap_io_cmd(samtoram_cmd, logfile + '.io')
+
+                operation = "samtoram from {0} to {1}".format(samfile, rootfile)
+                lauch_and_save_output(samtoram_cmd, logfile + ".log", operation, interactive=arguments['--interactive'])
 
         elif arguments['view']:
             df = pd.read_csv(arguments['VIEWS'])
@@ -192,17 +187,16 @@ if __name__ == '__main__':
 
                 region = "{0}:{1}-{2}".format(row['rname'], row['start'], row['end'])
 
-                file = find_file_in_paths(arguments['FILE'], arguments['--path'])
+                file = arguments['FILE']
                 logfile = "OP__{0}__{1}".format(os.path.basename(file), region)
                 logfile = os.path.join(outfolder, logfile)
 
                 if arguments['bam']:
-                    operation = "samtools view on {0} {1}".format(file, region)
                     logfile = logfile.replace("OP__", "bamview__")
                     cmd = ["samtools", "view", file, region]
+                    operation = "samtools view on {0} {1}".format(file, region)
 
                 elif arguments['ram']:
-                    operation = "ramtools view on {0} {1}".format(file, region)
                     logfile = logfile.replace("OP__", "ramview__")
 
                     # Options
@@ -214,16 +208,17 @@ if __name__ == '__main__':
 
                     if arguments['--stats']:
                         ttreeperffile = logfile + '.root'
-                        cmd[0] = cmd[:-1] + ', true, "{0}")'.format(ttreeperffile)
+                        cmd[-1] = cmd[-1][:-1] + ', true, "{0}")'.format(ttreeperffile)
+                    operation = "ramtools view on {0} {1}".format(file, region)
 
                 cmd = wrap_time_cmd(cmd, logfile + '.perf')
 
                 if arguments['--io']:
                     cmd = wrap_io_cmd(cmd, logfile + '.io')
 
-                lauch_and_save_output(cmd, logfile + '.log', operation, interactive=arguments['-I'])
+                lauch_and_save_output(cmd, logfile + '.log', operation, interactive=arguments['--interactive'])
 
-                if not arguments['-P']:
+                if not arguments['--parallel']:
                     wait_for_all(processes)
                     clear_buffer_cache()
 
@@ -241,4 +236,4 @@ if __name__ == '__main__':
                 parsetreestats_cmd = wrap_root_cmd(parsetreestats_cmd)
 
                 operation = "parsetreestats on {0}".format(file)
-                lauch_and_save_output(textfile, parsetreestats_cmd, operation, interactive=arguments['-I'])
+                lauch_and_save_output(parsetreestats_cmd, textfile, operation, interactive=arguments['--interactive'])
