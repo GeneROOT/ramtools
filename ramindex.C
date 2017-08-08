@@ -32,8 +32,9 @@ void ramindex(const char *file, bool update = true, std::string indexfile = ""){
 
         auto index_f = TFile::Open(indexfile.c_str(), "RECREATE");
         i->Write("INDEX");
-        delete index_f;
         std:cout << "Saving in separate indexfile " << indexfile << std::endl;
+        std::cout << "Size: " << f->GetSize() << std::endl;
+        delete index_f;
     }
 
     delete f;
