@@ -1,7 +1,7 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
           tools_perf.py convert [--no-split] [-c ALG] [-N] [--out OUTFILE] SAMFILE ROOTFILE
           tools_perf.py run samview FILE VIEWS [RANGE] [-P] [-N] [--io] [--out FOLDER]  [--path PATH]...
-          tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--io] [--out FOLDER] [--stats] [--macro MACRO]  [--path PATH]...
+          tools_perf.py run ramview FILE VIEWS [RANGE] [-P] [-N] [--io] [--out FOLDER] [--cache] [--stats] [--macro MACRO]  [--path PATH]...
           tools_perf.py parse [--out OUTFILE] LOGFILE...
           tools_perf.py parsetreestats TTREEPERFSTATS...
 
@@ -25,6 +25,7 @@ Options:
   --no-split            Reduce Splitlevel for banches
   -c, --compression ALG Compression algorithm of choice
   -s, --stats           Print TTreeStats to file
+  --cache               Enable TTreeCache
 """
 import os
 import random
@@ -96,15 +97,15 @@ if __name__ == '__main__':
             rootfile = arguments['ROOTFILE']
 
             split = "false" if arguments['--no-split'] else "true"
-            compression = arguments['--compression'] if arguments['--compression'] else "kLZMA"
+            compression = arguments['--compression'] if arguments['--compression'] else "ROOT::kLZMA"
 
             logfile = "samtoram_{0}_{1}_{2}".format(os.path.basename(samfile).split('.sam')[0], compression, 'split' if split == 'true' else 'nosplit')
             logfile = os.path.join(outfolder, logfile)
 
             samtoram_cmd = [
                 "/usr/bin/time", "-v", "--output={0}.perf".format(logfile),
-                "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, \"{3}\")".format(samfile, rootfile, split, compression,
-                                                                                                 compilation_flag)
+                "root", "-q", "-l", "-b", "samtoram.C{4}(\"{0}\", \"{1}\", {2}, {3})".format(samfile, rootfile, split, compression,
+                                                                                             compilation_flag)
             ]
 
             print(" ".join(samtoram_cmd))
@@ -203,11 +204,15 @@ if __name__ == '__main__':
                         "root", "-q", "-l", "-b"
                     ]
 
+                    cache = "false" if arguments['--no-split'] else "true"
+
                     if not arguments['--stats']:
-                        ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\")".format(rootfile, region, ramview_macro, compilation_flag)]
+                        ramtools_cmd += ["{2}{4}(\"{0}\", \"{1}\", {3})".format(rootfile, region, ramview_macro, cache
+                                                                                compilation_flag)]
                     else:
                         ttreeperffile = logfile + '.root'
-                        ramtools_cmd += ["{2}{3}(\"{0}\", \"{1}\", true, \"{4}\")".format(rootfile, region, ramview_macro, compilation_flag, ttreeperffile)]
+                        ramtools_cmd += ["{2}{4}(\"{0}\", \"{1}\", {3}, true, \"{5}\")".format(rootfile, region, ramview_macro, cache
+                                                                                               compilation_flag, ttreeperffile)]
 
                     if arguments['--io']:
                         ramtools_cmd = ['strace', '-o', '{0}.io'.format(logfile), '-TC'] + ramtools_cmd
