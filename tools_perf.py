@@ -189,6 +189,7 @@ if __name__ == '__main__':
                 convert_cmd = wrap_io_cmd(convert_cmd, logfile + '.io')
 
             lauch_and_save_output(convert_cmd, logfile + ".log", operation, interactive=arguments['--interactive'])
+            wait_for_all(processes)
 
             if arguments['bam']:
                 with open(logfile + ".log", 'w') as f:

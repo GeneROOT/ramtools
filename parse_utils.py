@@ -113,3 +113,59 @@ def load_samtobam_perf(file, method=''):
     compression = filesize_org / filesize
 
     return [method, usertime, systemtime, cpu_usage, memory, filesize, compression]
+
+
+def load_bamindex_perf(file, method=''):
+
+    with open(file, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    if "Command exited" in lines[0]:
+        lines = lines[1:]
+
+    if method == '':
+        method = os.path.basename(lines[0].split(' ')[-2])
+
+    usertime = float(lines[1].split(': ')[1])
+    systemtime = float(lines[2].split(': ')[1])
+    cpu_usage = float(lines[3].split(': ')[1].split('%')[0])
+    memory = int(lines[9].split(': ')[1].split('%')[0])
+
+    logfile = file.replace('.perf', '.log')
+
+    with open(logfile, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    filesize = int(lines[1].split('\t')[0].split(': ')[1])
+
+    return [method, usertime, systemtime, cpu_usage, memory, filesize]
+
+
+def load_ramindex_perf(file, method=''):
+
+    with open(file, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    if "Command exited" in lines[0]:
+        lines = lines[1:]
+
+    if method == '':
+        method = os.path.basename(lines[0].split('"')[2])
+
+    usertime = float(lines[1].split(': ')[1])
+    systemtime = float(lines[2].split(': ')[1])
+    cpu_usage = float(lines[3].split(': ')[1].split('%')[0])
+    memory = int(lines[9].split(': ')[1].split('%')[0])
+
+    logfile = file.replace('.perf', '.log')
+
+    with open(logfile, 'r') as f:
+        s = f.read()
+    lines = s.split('\n')
+
+    filesize = int(lines[3].split('\t')[0].split(': ')[1])
+
+    return [method, usertime, systemtime, cpu_usage, memory, filesize]
