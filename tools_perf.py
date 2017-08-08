@@ -49,6 +49,10 @@ def clear_buffer_cache():
         print(code)
         sys.exit(1)
 
+
+def sudo_reauth():
+    subprocess.call("while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &", shell=True)
+
 if __name__ == '__main__':
     arguments = docopt(__doc__)
     compilation_flag = '+' if not arguments['-N'] else ''
@@ -144,6 +148,8 @@ if __name__ == '__main__':
                 df = df.ix[rangestr2list(arguments['RANGE'])]
 
             arguments['--path'] = ['.'] + arguments['--path']
+
+            sudo_reauth()
 
             clear_buffer_cache()
 
