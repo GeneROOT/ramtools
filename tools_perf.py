@@ -1,6 +1,8 @@
 """Usage: tools_perf.py generate [-n NUMBER] [--out OUTFILE] GENOMETABLE
-          tools_perf.py convert bam [-iI] [--out OUTFILE] SAMFILE [BAMFILE]
-          tools_perf.py convert ram [-iINrT] [-a ALG] [--out OUTFILE] SAMFILE ROOTFILE
+          tools_perf.py convert bam [-iI] [--out OUTFOLDER] SAMFILE [BAMFILE]
+          tools_perf.py convert ram [-iINrT] [-a ALG] [--out OUTFOLDER] SAMFILE ROOTFILE
+          tools_perf.py index bam [-iI] [--out OUTFOLDER] FILE...
+          tools_perf.py index ram [-iINS] [--out OUTFOLDER] FILE...
           tools_perf.py view bam FILE VIEWS [-iIP] [--out OUTFOLDER] [RANGE]
           tools_perf.py view ram FILE VIEWS [-ciINPsT] [--out OUTFOLDER] [RANGE] [--macro MACRO]
           tools_perf.py parsetreestats TTREEPERFSTATS...
@@ -28,6 +30,7 @@ Options:
   -P, --parallel        Run scripts in parallel
   -r --no-index         Convert as raw without index
   -s --stats            Print TTreeStats to file
+  -S --separate         Put index in separate file
   -T --no-split         Reduce Splitlevel for banches
 """
 import os
@@ -192,6 +195,49 @@ if __name__ == '__main__':
                     print(subprocess.check_output(['stat', bamfile]).decode()[:-1], file=f)
                     print(subprocess.check_output(['stat', samfile]).decode(), file=f)
 
+        if arguments['index']:
+            sudo_reauth()
+
+            for file in arguments['FILE']:
+
+                clear_buffer_cache()
+
+                file_basename = os.path.basename(file).split('.sam')[0]
+                logfile = "index__{0}".format(file_basename)
+                logfile = os.path.join(outfolder, logfile)
+
+                if arguments['bam']:
+
+                    logfile = logfile.replace('index__', 'bamindex__')
+
+                    index_cmd = ['samtools', 'index', file, file + '.bai']
+                    operation = "samtools index on {0}".format(file)
+
+                elif arguments['ram']:
+
+                    logfile = logfile.replace('index__', 'ramindex__')
+
+                    index_cmd = ['ramindex.C{1}("{0}")'.format(file, compilation_flag)]
+
+                    if arguments['--separate']:
+                        index_cmd[-1] = index_cmd[-1][:-1] + ', false)'
+
+                    index_cmd = wrap_root_cmd(index_cmd)
+
+                    operation = "ramtools index {0}".format(file)
+
+                index_cmd = wrap_time_cmd(index_cmd, logfile + '.perf')
+                if arguments['--io']:
+                    index_cmd = wrap_io_cmd(index_cmd, logfile + '.io')
+
+                lauch_and_save_output(index_cmd, logfile + ".log", operation, interactive=arguments['--interactive'])
+
+                wait_for_all(processes)
+
+                if arguments['bam']:
+                    with open(logfile + ".log", 'w') as f:
+                        print(subprocess.check_output(['stat', file + '.bai']).decode(), file=f)
+
         elif arguments['view']:
             df = pd.read_csv(arguments['VIEWS'])
 
@@ -225,8 +271,8 @@ if __name__ == '__main__':
                     cmd = wrap_root_cmd(cmd)
 
                     if arguments['--stats']:
-                        ttreeperffile = logfile + '.root'
-                        cmd[-1] = cmd[-1][:-1] + ', true, "{0}")'.format(ttreeperffile)
+                        ttreeperf_file = logfile + '.root'
+                        cmd[-1] = cmd[-1][:-1] + ', true, "{0}")'.format(ttreeperf_file)
                     operation = "ramtools view on {0} {1}".format(file, region)
 
                 cmd = wrap_time_cmd(cmd, logfile + '.perf')
