@@ -24,7 +24,51 @@ def load_perf_file(file, method=""):
 
     filesize = os.stat(file.replace('.perf', '.log')).st_size
 
-    return [genome, method, region, usertime, systemtime, cpu_usage, memory, filesize]
+    if '_ram' in file:
+        method = 'ramtools'
+        if '_lzma' in file:
+            alg = 'lzma'
+        elif '_zlib' in file:
+            alg = 'zlib'
+        else:
+            alg = ''
+
+        split = '_nosplit' not in file
+        index = '_index' in file
+        cache = '_cache' in file
+    elif '_sam' in file:
+        method = 'samtools'
+        alg = split = index = cache = None
+    else:
+        raise ValueError(method)
+
+    basegenome = os.path.splitext(os.path.basename(genome))[0]
+    if '_' in basegenome:
+        basegenome = basegenome.split('_')[0]
+
+    return [genome, basegenome, method, index, cache, alg, split, region, usertime, systemtime, cpu_usage, memory, filesize]
+
+
+def load_perf_folder(folder):
+    perfs = [load_perf_file(f) for f in glob('{0}/*.perf'.format(folder))]
+
+    columns = ['file', 'genome', 'method', 'alg', 'split', 'index', 'cache', 'region', 'usertime', 'systemtime', 'cpu_usage', 'memory', 'filesize']
+
+    df = pd.DataFrame(data=perfs, columns=columns)
+    df['totaltime'] = df['usertime'] + df['systemtime']
+
+    df['Speed_MBps'] = (df['filesize']/1024**2)/ df['totaltime']
+
+    df['mem_MB'] = df['memory']/(1024)
+    df['size_MB'] = (df['filesize']/(1024**2)).round(2)
+
+    df = df.sort_values(['genome', 'method', 'index', 'cache', 'alg', 'split'])
+
+    return df
+
+
+def load_perf_superfolder(folder):
+    return pd.concat([load_perf_folder(subfolder) for subfolder in glob('{0}/*'.format(folder))], ignore_index=True)
 
 
 def get_metric(df, column, regions):
