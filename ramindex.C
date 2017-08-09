@@ -9,16 +9,24 @@
 
 #include <TTree.h>
 #include <TTreeIndex.h>
+#include <TStopwatch.h>
 #include <TFile.h>
 #include <TString.h>
 
 #include "ramrecord.h"
 
 void ramindex(const char *file, bool update = true, std::string indexfile = ""){
+
+    TStopwatch stopwatch;
+    stopwatch.Start();
+
     auto f = TFile::Open(file, "UPDATE");
     auto t = (TTree *)f->Get("RAM");
 
     t->BuildIndex("v_rnamehash", "v_pos");
+    std::cout << "Index built" << std::endl;
+    stopwatch.Print();
+
 
     if(update){
         t->Write();
@@ -32,7 +40,7 @@ void ramindex(const char *file, bool update = true, std::string indexfile = ""){
 
         auto index_f = TFile::Open(indexfile.c_str(), "RECREATE");
         i->Write("INDEX");
-        std:cout << "Saving in separate indexfile " << indexfile << std::endl;
+        std::cout << "Saving in separate indexfile " << indexfile << std::endl;
         std::cout << "Size: " << f->GetSize() << std::endl;
         delete index_f;
     }
