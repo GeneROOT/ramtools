@@ -5,6 +5,8 @@ import re
 from glob import glob
 import pandas as pd
 
+columns = ['file', 'genome', 'method', 'index', 'cache', 'alg', 'split', 'memlim', 'region', 'usertime', 'systemtime', 'cpu_usage', 'memory', 'filesize']
+
 
 def load_perf_file(file, method=""):
     if method == "":
@@ -42,33 +44,38 @@ def load_perf_file(file, method=""):
     else:
         raise ValueError(method)
 
+    memlim = 'memlim' in file
+
     basegenome = os.path.splitext(os.path.basename(genome))[0]
     if '_' in basegenome:
         basegenome = basegenome.split('_')[0]
 
-    return [genome, basegenome, method, index, cache, alg, split, region, usertime, systemtime, cpu_usage, memory, filesize]
+    return [genome, basegenome, method, index, cache, alg, split, memlim, region, usertime, systemtime, cpu_usage, memory, filesize]
 
 
 def load_perf_folder(folder):
     perfs = [load_perf_file(f) for f in glob('{0}/*.perf'.format(folder))]
 
-    columns = ['file', 'genome', 'method', 'alg', 'split', 'index', 'cache', 'region', 'usertime', 'systemtime', 'cpu_usage', 'memory', 'filesize']
-
     df = pd.DataFrame(data=perfs, columns=columns)
     df['totaltime'] = df['usertime'] + df['systemtime']
 
-    df['Speed_MBps'] = (df['filesize']/1024**2)/ df['totaltime']
+    df['Speed_MBps'] = (df['filesize']/1024**2) / df['totaltime']
 
     df['mem_MB'] = df['memory']/(1024)
     df['size_MB'] = (df['filesize']/(1024**2)).round(2)
 
-    df = df.sort_values(['genome', 'method', 'index', 'cache', 'alg', 'split'])
+    df = df.sort_values(['genome', 'method', 'index', 'cache', 'alg', 'split', 'memlim', 'region'])
 
     return df
 
 
-def load_perf_superfolder(folder):
-    return pd.concat([load_perf_folder(subfolder) for subfolder in glob('{0}/*'.format(folder))], ignore_index=True)
+def load_perf_superfolders(folders):
+    df = pd.DataFrame(columns=columns)
+    for folder in folders:
+        df = pd.concat([df]+[load_perf_folder(subfolder) for subfolder in glob('{0}/*'.format(folder))], ignore_index=True)
+
+    df = df.sort_values(['genome', 'method', 'index', 'cache', 'alg', 'split', 'memlim'])
+    return df
 
 
 def get_metric(df, column, regions):
@@ -161,7 +168,7 @@ def load_samtobam_perf(file, method=''):
     filesize_org = int(lines[10].split('\t')[0].split(': ')[1])
     compression = filesize_org / filesize
 
-    file = method.split('.bam')[0]
+    file = os.path.basename(method).split('.bam')[0]
 
     return [file, 'samtools', usertime, systemtime, cpu_usage, memory, filesize, compression]
 
