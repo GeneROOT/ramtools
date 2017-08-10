@@ -226,7 +226,9 @@ def load_ramindex_perf(file, method=''):
         s = f.read()
     lines = s.split('\n')
 
-    filesize = int(lines[3].split('\t')[0].split(': ')[1])
+    for line in lines:
+        if line.startswith('Size'):
+            filesize = int(line.split('\t')[0].split(': ')[1])
 
     file = method.split('_')[0]
     method = "ramtools_" + method[len(file):].split('.root')[0]
