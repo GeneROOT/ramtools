@@ -101,7 +101,7 @@ def wait_for_all(processes):
 
 
 def wrap_root_cmd(cmd):
-    return ["root", "-q", "-l", "-b"] + cmd
+    return ["root.exe", "-q", "-l", "-b"] + cmd
 
 
 def wrap_time_cmd(cmd, time_logfile):
@@ -276,7 +276,8 @@ if __name__ == '__main__':
                         cmd[-1] = cmd[-1][:-1] + ', true, "{0}")'.format(ttreeperf_file)
                     operation = "ramtools view on {0} {1}".format(file, region)
 
-                cmd = wrap_time_cmd(cmd, logfile + '.perf')
+                if not arguments['--io']:
+                    cmd = wrap_time_cmd(cmd, logfile + '.perf')
 
                 if arguments['--io']:
                     cmd = wrap_io_cmd(cmd, logfile + '.io')
@@ -302,3 +303,4 @@ if __name__ == '__main__':
 
                 operation = "parsetreestats on {0}".format(file)
                 lauch_and_save_output(parsetreestats_cmd, textfile, operation, interactive=arguments['--interactive'])
+
