@@ -15,6 +15,8 @@ void ramreader(const char *file = "ramexample.root")
    auto f = TFile::Open(file);
    auto t = (TTree*) f->Get("RAM");
 
+   RAMRecord::ReadRefMap();
+
    RAMRecord *r = 0;
 
    t->SetBranchAddress("RAMRecord.", &r);
@@ -59,4 +61,7 @@ void ramreader(const char *file = "ramexample.root")
    RAMRecord r2 = *r;
    printf("\nFull print of copied last RAMRecord:\n");
    r2.Print();
+
+   printf("\nPrint RefMap:\n");
+   RAMRecord::PrintRefMap();
 }
