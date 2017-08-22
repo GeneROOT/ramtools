@@ -14,7 +14,7 @@ int RAMRecord::GetRefId(const char *rname, bool check_sort)
 
    if (rname[0] == '=')
       return fgLastId;
-   
+
    if (fgLastName == rname)
       return fgLastId;
 
@@ -29,7 +29,7 @@ int RAMRecord::GetRefId(const char *rname, bool check_sort)
    fgLastId = fgNextId;
    fgLastName = rname;
    fgNextId++;
-   
+
    return fgLastId;
 }
 
@@ -72,7 +72,6 @@ void RAMRecord::WriteRefMap()
 
 void RAMRecord::ReadRefMap()
 {
-   RefMap *fgRefMap = 0;
    if (gFile)
       fgRefMap = (RefMap*) gFile->Get("fgRefMap");
    else
@@ -81,6 +80,9 @@ void RAMRecord::ReadRefMap()
 
 void RAMRecord::PrintRefMap()
 {
+   if (!fgRefMap)
+      RAMRecord::ReadRefMap();
+
    RefMap::iterator it = fgRefMap->begin();
    while (it != fgRefMap->end()) {
       printf("%s: %d\n", it->first.c_str(), it->second);
