@@ -141,14 +141,14 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       }
       nlines++;
    }
-   
+
    if (index) {
       tree->BuildIndex("v_refid", "v_pos");
    }
 
    tree->Print();
    tree->Write();
-   
+
    // Write RefMap
    RAMRecord::WriteRefMap();
 
