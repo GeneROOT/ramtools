@@ -13,11 +13,12 @@
 #include <Compression.h>
 #include <cstring>
 
-#include "ramrecord.h"
 #include "utils.h"
 
+#include "ramrecord.C"
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "samexample.root", bool index = true,
+
+void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root", bool index = true,
               bool split = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
@@ -86,8 +87,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "s
 
             // rname
             if (ntok == 2){
-               r->SetRNAME(tok);
-               r->SetRNAMEHASH(TString::Hash(tok, std::strlen(tok)));
+               r->SetREFID(tok);
             }
             // pos
             if (ntok == 3)
@@ -103,7 +103,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "s
 
             // rnext
             if (ntok == 6)
-               r->SetRNEXT(tok);
+               r->SetREFNEXT(tok);
 
             // pnext
             if (ntok == 7)
@@ -141,12 +141,16 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "s
       }
       nlines++;
    }
-   if(index){
-      tree->BuildIndex("v_rnamehash", "v_pos");
+   
+   if (index) {
+      tree->BuildIndex("v_refid", "v_pos");
    }
 
    tree->Print();
    tree->Write();
+   
+   // Write RefMap
+   RAMRecord::WriteRefMap();
 
    fclose(fp);
    delete f;
