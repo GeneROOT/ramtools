@@ -8,23 +8,23 @@
 #include <TTree.h>
 #include <TRandom.h>
 #include <iostream>
-#include "ramrecord.h"
 #include <Compression.h>
+#include "ramrecord.C"
 
 void checkalg(const char *file = "ramexample.root")
 {
    auto f = TFile::Open(file);
-   auto t = (TTree*) f->Get("RAM");
+   auto t = (TTree *)f->Get("RAM");
 
    RAMRecord *r = 0;
 
    t->SetBranchAddress("RAMRecord.", &r);
-    
-   //t->Print();
+
+   // t->Print();
    std::cout << "LZMA = " << ROOT::kLZMA << std::endl;
    std::cout << "GZIP = " << ROOT::kZLIB << std::endl;
    std::cout << "COMPALG = " << f->GetCompressionAlgorithm() << std::endl;
-   std::cout << "COMPLEV = " <<  f->GetCompressionLevel() << std::endl;
+   std::cout << "COMPLEV = " << f->GetCompressionLevel() << std::endl;
 
    TBranch *b = t->GetBranch("RAMRecord.");
 
