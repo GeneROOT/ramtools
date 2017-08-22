@@ -13,38 +13,36 @@
 #include <TFile.h>
 #include <TString.h>
 
-#include "ramrecord.h"
+#include "ramrecord.C"
 
-void ramindex(const char *file, bool update = true, std::string indexfile = ""){
+void ramindex(const char *file, bool update = true, std::string indexfile = "")
+{
+   TStopwatch stopwatch;
+   stopwatch.Start();
 
-    TStopwatch stopwatch;
-    stopwatch.Start();
+   auto f = TFile::Open(file, "UPDATE");
+   auto t = RAMRecord::GetTree(f);
 
-    auto f = TFile::Open(file, "UPDATE");
-    auto t = (TTree *)f->Get("RAM");
+   t->BuildIndex("v_refid", "v_pos");
+   std::cout << "Index built" << std::endl;
+   stopwatch.Print();
 
-    t->BuildIndex("v_rnamehash", "v_pos");
-    std::cout << "Index built" << std::endl;
-    stopwatch.Print();
+   if (update) {
+      t->Write();
+   } else {
+      auto i = t->GetTreeIndex();
+      if (indexfile.empty()) {
+         indexfile = file;
+         indexfile.append(".rai");
+      }
 
+      auto index_f = TFile::Open(indexfile.c_str(), "RECREATE");
+      i->Write("INDEX");
+      std::cout << "Saving in separate indexfile " << indexfile << std::endl;
+      std::cout << "Size: " << f->GetSize() << std::endl;
+      delete index_f;
+   }
 
-    if(update){
-        t->Write();
-    }
-    else{
-        auto i  = t->GetTreeIndex();
-        if( indexfile.empty() ){
-            indexfile = file;
-            indexfile.append(".rai");
-        }
-
-        auto index_f = TFile::Open(indexfile.c_str(), "RECREATE");
-        i->Write("INDEX");
-        std::cout << "Saving in separate indexfile " << indexfile << std::endl;
-        std::cout << "Size: " << f->GetSize() << std::endl;
-        delete index_f;
-    }
-
-    delete f;
-    std::cout << "Index generated for " << file << std::endl;
+   delete f;
+   std::cout << "Index generated for " << file << std::endl;
 }

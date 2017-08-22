@@ -62,20 +62,32 @@ const char *RAMRecord::GetRefName(int rid, bool next)
    return "";
 }
 
+TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
+{
+   if (!file) {
+      ::Error("RAMRecord::GetTree", "file was not opened");
+      return 0;
+   }
+   TTree *t = (TTree *) file->Get(treeName);
+   RAMRecord::ReadRefMap();
+   return t;
+}
+
 void RAMRecord::WriteRefMap()
 {
    if (gFile)
       gFile->WriteObjectAny(fgRefMap, "RAMRecord::RefMap", "fgRefMap");
    else
-      printf("No file open\n");
+      ::Error("RAMRecord::WriteRefMap", "no file open");
 }
 
 void RAMRecord::ReadRefMap()
 {
-   if (gFile)
-      fgRefMap = (RefMap*) gFile->Get("fgRefMap");
-   else
-      printf("No file open\n");
+   if (gFile) {
+      if (!fgRefMap)
+         fgRefMap = (RefMap*) gFile->Get("fgRefMap");
+   } else
+      ::Error("RAMRecord::ReadRefMap", "no file open");
 }
 
 void RAMRecord::PrintRefMap()

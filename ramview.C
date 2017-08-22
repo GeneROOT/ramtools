@@ -13,29 +13,30 @@
 #include <TStopwatch.h>
 #include <TTreePerfStats.h>
 
-#include "ramrecord.h"
+#include "ramrecord.C"
 
-void ramview(const char *file, const char *query, bool cache=false, bool perfstats=false, const char* perfstatsfilename="perf.root")
+
+void ramview(const char *file, const char *query, bool cache = false, bool perfstats = false,
+             const char *perfstatsfilename = "perf.root")
 {
-
    TStopwatch stopwatch;
    stopwatch.Start();
 
    // Open the file and load tree and reader
    auto f = TFile::Open(file);
-   auto t = (TTree *)f->Get("RAM");
+   auto t = RAMRecord::GetTree(f);
+
    RAMRecord *r = 0;
 
-   if(!cache){
+   if (!cache) {
       t->SetCacheSize(0);
    }
 
    TTreePerfStats *ps = 0;
 
-   if(perfstats){
+   if (perfstats) {
       ps = new TTreePerfStats("ioperf", t);
    }
-
 
    t->SetBranchAddress("RAMRecord.", &r);
 
@@ -58,9 +59,9 @@ void ramview(const char *file, const char *query, bool cache=false, bool perfsta
    // Assume RNAME are chunked together
    // We look only at the RNAME column
    // We can only do this when there are columns
-   if(b->GetSplitLevel() > 0){
-       t->SetBranchStatus("RAMRecord.*", 0);
-       t->SetBranchStatus("RAMRecord.v_rname", 1);
+   if (b->GetSplitLevel() > 0) {
+      t->SetBranchStatus("RAMRecord.*", 0);
+      t->SetBranchStatus("RAMRecord.v_rname", 1);
    }
 
    for (int i = 0; i < t->GetEntries(); i++) {
@@ -76,7 +77,7 @@ void ramview(const char *file, const char *query, bool cache=false, bool perfsta
 
       // We need to look both at the leftmost position (v_pos)
       // as well as the length of sequence (v_lseq)
-      if(b->GetSplitLevel() > 0){
+      if (b->GetSplitLevel() > 0) {
          t->SetBranchStatus("RAMRecord.v_pos", 1);
          t->SetBranchStatus("RAMRecord.v_lseq", 1);
       }
@@ -100,7 +101,7 @@ void ramview(const char *file, const char *query, bool cache=false, bool perfsta
       if (posStart >= 0) {
 
          // Enable all fields for printing
-         if(b->GetSplitLevel() > 0){
+         if (b->GetSplitLevel() > 0) {
             t->SetBranchStatus("RAMRecord.*", 1);
          }
          for (int i = posStart; i < t->GetEntries(); i++) {
@@ -123,11 +124,9 @@ void ramview(const char *file, const char *query, bool cache=false, bool perfsta
 
    stopwatch.Print();
 
-   if(perfstats){
+   if (perfstats) {
       ps->SaveAs(perfstatsfilename);
       delete ps;
-      printf("Reading %lld bytes in %d transactions\n",f->GetBytesRead(),  f->GetReadCalls());
+      printf("Reading %lld bytes in %d transactions\n", f->GetBytesRead(), f->GetReadCalls());
    }
-
-  
 }

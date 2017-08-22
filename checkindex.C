@@ -13,7 +13,8 @@
 void checkindex(const char *file = "ramexample.root")
 {
    auto f = TFile::Open(file);
-   auto t = (TTree *)f->Get("RAM");
+   auto t = RAMRecord::GetTree(f);
+
    RAMRecord *r = 0;
    t->SetBranchAddress("RAMRecord.", &r);
 
@@ -23,7 +24,6 @@ void checkindex(const char *file = "ramexample.root")
    if (i) {
       std::cout << "Index present in TTree" << std::endl;
    } else {
-
       std::string indexfile = file;
       indexfile.append(".rai");
       std::FILE *fp = std::fopen(indexfile.c_str(), "r");

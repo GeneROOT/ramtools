@@ -13,9 +13,7 @@
 void ramreader(const char *file = "ramexample.root")
 {
    auto f = TFile::Open(file);
-   auto t = (TTree*) f->Get("RAM");
-
-   RAMRecord::ReadRefMap();
+   auto t = RAMRecord::GetTree(f);
 
    RAMRecord *r = 0;
 

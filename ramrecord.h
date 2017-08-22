@@ -96,6 +96,7 @@ public:
 
    void        Print(Option_t *option="") const;
    
+   static TTree *GetTree(TFile *file, const char *treeName = "RAM");
    static void WriteRefMap();
    static void ReadRefMap();
    static void PrintRefMap();
@@ -536,6 +537,7 @@ inline void RAMRecord::Print(Option_t *) const
       std::cout << "\t" << GetOPT(i);
    std::cout << std::endl;
 }
+
 
 #ifdef __ROOTCLING__
 #pragma link C++ class RAMRecord+;

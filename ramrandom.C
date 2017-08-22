@@ -9,29 +9,33 @@
 #include <TTree.h>
 #include <TRandom.h>
 
-#include "ramrecord.h"
+#include "ramrecord.C"
 
-void ramrandom(const char *file = "/eos/genome/local/14007a/realigned_SAM/6148.root", const char *outfile = "out.out", const int n = 10)
+void ramrandom(const char *file = "/eos/genome/local/14007a/realigned_SAM/6148.root", const char *outfile = "out.out",
+               int n = 10)
 {
    auto f = TFile::Open(file);
-   auto t = (TTree*) f->Get("RAM");
+   auto t = RAMRecord::GetTree(f);
+   if (!t) {
+      ::Error("ramrandom", "file %s, not found or open", file);
+      return;
+   }
 
    RAMRecord *r = 0;
 
    t->SetBranchAddress("RAMRecord.", &r);
 
-   if (n > t->GetEntries())
-	{
-		cout << "Error : n is larger than number of entries!" << endl;
-		return;
-	}
+   if (n > t->GetEntries()) {
+      cout << "Error : n is larger than number of entries!" << endl;
+      return;
+   }
 
    cout << "There are : " << t->GetEntries() << " entries" << endl;
-   UInt_t NumberOfSamples = t->GetEntries();
+   UInt_t numberOfSamples = t->GetEntries();
 
    // Random access loop
    for (int i = 0; i < n; i++) {
-      int index = gRandom->Integer(NumberOfSamples);
+      int index = gRandom->Integer(numberOfSamples);
       t->GetEvent(index);
       cout << "Accessing : " << index << endl;
       r->Print();

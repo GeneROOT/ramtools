@@ -18,9 +18,9 @@ void parsetreestats(const char *file = "treestats.root", bool saveimage = false,
    auto ioperf = (TTreePerfStats *)f->Get("ioperf");
    ioperf->Print();
 
-   //Save the image
-   
-   if(saveimage){
+   // Save the image
+
+   if (saveimage) {
       TCanvas *c = new TCanvas;
       TImage *img = TImage::Create();
       ioperf->Draw();
@@ -28,11 +28,7 @@ void parsetreestats(const char *file = "treestats.root", bool saveimage = false,
       img->WriteImage(imagefile);
       delete img;
       delete c;
-   }
-   else{
+   } else {
       ioperf->Draw();
    }
-   
-      
 }
-
