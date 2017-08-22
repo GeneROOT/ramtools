@@ -1,4 +1,4 @@
 clean:
-	rm *.d
-	rm *.pcm
-	rm *.so
+	rm -f *.d
+	rm -f *.pcm
+	rm -f *.so
