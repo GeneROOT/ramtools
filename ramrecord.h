@@ -26,14 +26,13 @@ public:
 private:
    TString         v_qname;          // Query template NAME
    UShort_t        v_flag;           // Bitwise FLAG
-   TString         v_rname;          // Reference sequence NAME
-   UInt_t          v_rnamehash;      //   hashed version of RNAME for indexing
-   UInt_t          v_pos;            // 1-based left most mapping POSition
+   Int_t           v_refid;          // Reference sequence ID (maps to reference seq name)
+   Int_t           v_pos;            // 0-based left most mapping POSition
    UChar_t         v_mapq;           // MAPing Quality
    Int_t           v_ncigar_op;      // Number of CIGAR operands
    UInt_t         *v_cigar;          //[v_ncigar_op] (op_len<<4|op. "MIDNSHP=X" -> "012345678")
-   TString         v_rnext;          // Reference name of the mate/next read
-   UInt_t          v_pnext;          // Position of the mate/next read
+   Int_t           v_refnext;        // Reference ID of the mate/next read
+   Int_t           v_pnext;          // 0-based position of the mate/next read
    Int_t           v_tlen;           // Observed Template LENgth
    Int_t           v_lseq;           // Length of segment SEQuence
    Int_t           v_lseq2;          // (Length+1)/2 of segment SEQuence
@@ -41,10 +40,18 @@ private:
    UChar_t        *v_qual;           //[v_lseq] ASCII of Phred-scaled base QUALity+33
    Int_t           v_nopt;           // Number of optional fields
    TString        *v_opt;            //[v_nopt] Optional fields
+   
+   typedef std::map<std::string,int> RefMap;
+   static RefMap      *fgRefMap;
+   static int          fgNextId;
+   static int          fgLastId;
+   static std::string  fgLastName;
+   static int GetRefId(const char *rname, bool check_sort = false);
+   static const char *GetRefName(int rid, bool next = false);
 
 public:
-   RAMRecord() : v_flag(0), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
-                 v_pnext(0), v_tlen(0), v_lseq(0), v_nopt(0),
+   RAMRecord() : v_flag(0), v_refid(-1), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
+                 v_refnext(-1), v_pnext(0), v_tlen(0), v_lseq(0), v_nopt(0),
                  v_lseq2(0), v_seq(nullptr), v_qual(nullptr), v_opt(nullptr) { }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
@@ -55,13 +62,12 @@ public:
 
    void SetQNAME(const char *qname) { v_qname = qname; }
    void SetFLAG(UShort_t f) { v_flag = f; }
-   void SetRNAME(const char *rname) { v_rname = rname; }
-   void SetRNAMEHASH(UInt_t rnamehash) { v_rnamehash = rnamehash; }
-   void SetPOS(UInt_t pos) { v_pos = pos; }
+   void SetREFID(const char *rname);
+   void SetPOS(Int_t pos) { v_pos = pos - 1; }
    void SetMAPQ(UChar_t mapq) { v_mapq = mapq; }
    void SetCIGAR(const char *cigar);
-   void SetRNEXT(const char *rnext) { v_rnext = rnext; }
-   void SetPNEXT(UInt_t pnext) { v_pnext = pnext; }
+   void SetREFNEXT(const char *rnext);
+   void SetPNEXT(Int_t pnext) { v_pnext = pnext - 1; }
    void SetTLEN(Int_t tlen) { v_tlen = tlen; }
    void SetSEQ(const char *seq);
    void SetQUAL(const char *qual);
@@ -70,16 +76,17 @@ public:
 
    const char *GetQNAME() const { return v_qname; }
    UInt_t      GetFLAG() const { return v_flag; }
-   const char *GetRNAME() const { return v_rname; }
-   UInt_t      GetRNAMEHASH() const {return v_rnamehash; }
-   UInt_t      GetPOS() const { return v_pos; }
+   const char *GetRNAME() const;
+   Int_t       GetREFID() const { return v_refid; }
+   Int_t       GetPOS() const { return v_pos; }
    UInt_t      GetMAPQ() const { return v_mapq; }
    Int_t       GetNCIGAROP() { return v_ncigar_op; }
    Int_t       GetCIGAROPLEN(Int_t idx);
    Int_t       GetCIGAROP(Int_t idx);
    const char *GetCIGAR() const;
-   const char *GetRNEXT() const { return v_rnext; }
-   UInt_t      GetPNEXT() const { return v_pnext; }
+   const char *GetRNEXT() const;
+   Int_t       GetREFNEXT() const { return v_refnext; }
+   Int_t       GetPNEXT() const { return v_pnext; }
    Int_t       GetTLEN() const { return v_tlen; }
    Int_t       GetSEQLEN() const { return v_lseq; }
    const char *GetSEQ() const;
@@ -88,20 +95,24 @@ public:
    const char *GetOPT(Int_t idx) const;
 
    void        Print(Option_t *option="") const;
+   
+   static void WriteRefMap();
+   static void ReadRefMap();
+   static void PrintRefMap();
 
    ClassDef(RAMRecord,1)
 };
 
 // Return values of GetCIGAROP()
-const UChar_t RAM_CIGAR_M = 0;
-const UChar_t RAM_CIGAR_I = 1;
-const UChar_t RAM_CIGAR_D = 2;
-const UChar_t RAM_CIGAR_N = 3;
-const UChar_t RAM_CIGAR_S = 4;
-const UChar_t RAM_CIGAR_H = 5;
-const UChar_t RAM_CIGAR_P = 6;
+const UChar_t RAM_CIGAR_M     = 0;
+const UChar_t RAM_CIGAR_I     = 1;
+const UChar_t RAM_CIGAR_D     = 2;
+const UChar_t RAM_CIGAR_N     = 3;
+const UChar_t RAM_CIGAR_S     = 4;
+const UChar_t RAM_CIGAR_H     = 5;
+const UChar_t RAM_CIGAR_P     = 6;
 const UChar_t RAM_CIGAR_EQUAL = 7;
-const UChar_t RAM_CIGAR_X = 8;
+const UChar_t RAM_CIGAR_X     = 8;
 
 // Illumina binning scheme:
 // 1      1
@@ -113,13 +124,13 @@ const UChar_t RAM_CIGAR_X = 8;
 // 35-39 37
 // >=40  40
 static const UChar_t illumina_binning[] = {
-	0,   1,  6,  6,  6,  6,  6,  6,  6,  6, 15, 15, 15, 15, 15, 15, 15,
+   0,   1,  6,  6,  6,  6,  6,  6,  6,  6, 15, 15, 15, 15, 15, 15, 15,
    15, 15, 15, 22, 22, 22, 22, 22, 27, 27, 27, 27, 27, 33, 33, 33, 33,
    33, 37, 37, 37, 37, 37, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-	40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-	40, 40, 40, 40, 40, 40, 40, 40
+   40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+   40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+   40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+   40, 40, 40, 40, 40, 40, 40, 40
 };
 
 inline static UChar_t IlluminaBinning(UChar_t qual)
@@ -133,7 +144,7 @@ inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
 
    v_qname     = rec.v_qname;
    v_flag      = rec.v_flag;
-   v_rname     = rec.v_rname;
+   v_refid     = rec.v_refid;
    v_pos       = rec.v_pos;
    v_mapq      = rec.v_mapq;
    v_cigar     = rec.v_cigar;
@@ -143,7 +154,7 @@ inline RAMRecord::RAMRecord(const RAMRecord &rec) : TObject(rec)
       v_cigar = new UInt_t[v_ncigar_op];
       memcpy(v_cigar, rec.v_cigar, v_ncigar_op*sizeof(UInt_t));
    }
-   v_rnext     = rec.v_rnext;
+   v_refnext   = rec.v_refnext;
    v_pnext     = rec.v_pnext;
    v_tlen      = rec.v_tlen;
    v_lseq      = rec.v_lseq;
@@ -175,7 +186,7 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
       TObject::operator=(rhs);
       v_qname     = rhs.v_qname;
       v_flag      = rhs.v_flag;
-      v_rname     = rhs.v_rname;
+      v_refid     = rhs.v_refid;
       v_pos       = rhs.v_pos;
       v_mapq      = rhs.v_mapq;
       v_ncigar_op = rhs.v_ncigar_op;
@@ -187,7 +198,7 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
          v_cigar = new UInt_t[v_ncigar_op];
          memcpy(v_cigar, rhs.v_cigar, v_ncigar_op*sizeof(UInt_t));
       }
-      v_rnext     = rhs.v_rnext;
+      v_refnext   = rhs.v_refnext;
       v_pnext     = rhs.v_pnext;
       v_tlen      = rhs.v_tlen;
       v_lseq      = rhs.v_lseq;
@@ -220,6 +231,26 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
       }
    }
    return *this;
+}
+
+inline void RAMRecord::SetREFID(const char *rname)
+{
+   v_refid = GetRefId(rname);
+}
+
+inline void RAMRecord::SetREFNEXT(const char *rnext)
+{
+   v_refnext = GetRefId(rnext);
+}
+
+inline const char *RAMRecord::GetRNAME() const
+{
+   return GetRefName(v_refid);
+}
+
+inline const char *RAMRecord::GetRNEXT() const
+{
+   return GetRefName(v_refnext, true);
 }
 
 
@@ -498,8 +529,8 @@ inline void RAMRecord::Print(Option_t *) const
    // Print a single record, in SAM format.
 
    std::cout << GetQNAME() << "\t" << GetFLAG() << "\t" << GetRNAME() << "\t"
-             << GetPOS() << "\t" << GetMAPQ() << "\t" << GetCIGAR() << "\t"
-             << GetRNEXT() << "\t" << GetPNEXT() << "\t" << GetTLEN() << "\t"
+             << GetPOS()+1 << "\t" << GetMAPQ() << "\t" << GetCIGAR() << "\t"
+             << GetRNEXT() << "\t" << GetPNEXT()+1 << "\t" << GetTLEN() << "\t"
              << GetSEQ() << "\t" << GetQUAL();
    for (int i = 0; i < GetNOPT(); i++)
       std::cout << "\t" << GetOPT(i);
