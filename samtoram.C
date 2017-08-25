@@ -19,7 +19,7 @@
 
 
 void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root", bool index = true,
-              bool split = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
+              bool split = true, bool cache = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
 
@@ -49,12 +49,22 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
 
    // Select split level
    int splitlevel = 0;
-   if(split){
+   if (split)
       splitlevel = 99;
-   }
 
    tree->Branch("RAMRecord.", &r, 64000, splitlevel);
+
+   //tree->SetAutoFlush(0);
    tree->SetMaxTreeSize(500000000000LL);  // Defautlt is 100GB, change to 500GB
+
+   if (!cache)
+      tree->SetCacheSize(0);
+   
+   // Store SAM header records in a list stored as UserInfo with the tree
+   TList *headers = new TList;
+   headers->SetName("headers");
+   TList *userinfo = tree->GetUserInfo();
+   userinfo->Add(headers);
 
    int nlines = 0;
    int nrecords = 0;
@@ -69,9 +79,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       while ((tok = strtok(ntok ? 0 : line, "\t"))) {
 
          if ((ntok == 0 && tok[0] == '@') || header) {
-            // skip header lines for the time being
-
-            // Create header objects
+            headers->Add(new TNamed(tok, line+strlen(tok)+1));
             header = true;
             break;
 
@@ -155,7 +163,8 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    fclose(fp);
    delete f;
 
-   printf("\nProcessed %d SAM records\n", nrecords);
+   printf("\nProcessed %d SAM headers\n", nlines-nrecords);
+   printf("Processed %d SAM records\n\n", nrecords);
 
    stopwatch.Print();
 }
