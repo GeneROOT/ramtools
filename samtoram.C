@@ -14,12 +14,13 @@
 #include <cstring>
 
 #include "utils.h"
-
 #include "ramrecord.C"
 
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root", bool index = true,
-              bool split = true, bool cache = true, Int_t compression_algorithm = ROOT::kLZMA, UInt_t quality_policy = RAMRecord::kPhred33)
+void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
+              bool index = true, bool split = true, bool cache = true,
+              Int_t compression_algorithm = ROOT::kLZMA,
+              UInt_t quality_policy = RAMRecord::kPhred33)
 {
    // Convert a SAM file into a RAM file.
 
@@ -43,7 +44,6 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    auto tree = new TTree("RAM", datafile);
 
    // create a branch for a RAMRecord
-   // don't stream TObject info, but still nice to have a TObject derived class
    auto *r = new RAMRecord;
    r->SetBit(quality_policy);
 
@@ -53,21 +53,19 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       splitlevel = 99;
 
    tree->Branch("RAMRecord.", &r, 64000, splitlevel);
-
-   //tree->SetAutoFlush(0);
    tree->SetMaxTreeSize(500000000000LL);  // Defautlt is 100GB, change to 500GB
 
    if (!cache)
       tree->SetCacheSize(0);
-   
+
    // Store SAM header records in a list stored as UserInfo with the tree
    TList *headers = new TList;
    headers->SetName("headers");
    TList *userinfo = tree->GetUserInfo();
    userinfo->Add(headers);
 
-   int nlines = 0;
-   int nrecords = 0;
+   Long64_t nlines = 0;
+   Long64_t nrecords = 0;
 
    const int maxl = 10240;
    char line[maxl];
@@ -144,27 +142,31 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       }
 
       if (!header) {
-         nrecords++;
          tree->Fill();
+         if (index && nrecords % 1000 == 0)
+            RAMRecord::GetIndex()->AddItem(r->GetREFID(), r->GetPOS(), nrecords);         
+         nrecords++;
       }
       nlines++;
-   }
-
-   if (index) {
-      tree->BuildIndex("v_refid", "v_pos");
    }
 
    tree->Print();
    tree->Write();
 
-   // Write RefMap
-   RAMRecord::WriteRefMap();
+   // Write Refs
+   RAMRecord::GetRefs()->Print();
+   RAMRecord::WriteRefs();
+   
+   if (index) {
+      RAMRecord::GetIndex()->Print();
+      RAMRecord::WriteIndex();
+   }
 
    fclose(fp);
    delete f;
 
-   printf("\nProcessed %d SAM headers\n", nlines-nrecords);
-   printf("Processed %d SAM records\n\n", nrecords);
+   printf("\nProcessed %lld SAM headers\n", nlines-nrecords);
+   printf("Processed %lld SAM records\n\n", nrecords);
 
    stopwatch.Print();
 }
