@@ -10,12 +10,54 @@
 
 #include <TObject.h>
 #include <TString.h>
+#include <TError.h>
 #include <iostream>
 
 
+class RAMRefs {
+private:
+   typedef std::vector<std::string> Refs_t;
+   Refs_t      fRefVec;
+   int         fLastId;
+   int         fMaxId;
+   std::string fLastName;
+   
+public:
+   RAMRefs();
+   ~RAMRefs() { }
+
+   int         GetRefId(const char *rname, bool check_sort = false);
+   const char *GetRefName(int rid, bool next = false);
+
+   void    Print() const;
+   ULong_t Size() const { return fRefVec.size(); }
+   
+   ClassDefNV(RAMRefs,1)
+};
+
+
+class RAMIndex {
+private:
+   typedef std::pair<int,int> Key_t;      // refid (of rname) and pos
+   typedef std::map<Key_t,Long64_t> Index_t;
+   
+   Index_t fIndex;
+
+public:
+   RAMIndex() { }
+   ~RAMIndex() { }
+   
+   void     AddItem(int refid, int pos, Long64_t row);
+   Long64_t GetRow(int refid, int pos);
+   
+   void    Print() const;
+   ULong_t Size() const { return fIndex.size(); }
+   
+   ClassDefNV(RAMIndex,1)
+};
+
 
 class RAMRecord : public TObject {
-
 public:
    enum EQualCompressionBits {
       kPhred33          = BIT(14),   // Default Phred+33 quality score
@@ -41,18 +83,16 @@ private:
    Int_t           v_nopt;           // Number of optional fields
    TString        *v_opt;            //[v_nopt] Optional fields
    
-   typedef std::map<std::string,int> RefMap;
-   static RefMap      *fgRefMap;
-   static int          fgNextId;
-   static int          fgLastId;
-   static std::string  fgLastName;
-   static int GetRefId(const char *rname, bool check_sort = false);
-   static const char *GetRefName(int rid, bool next = false);
+   static RAMRefs  *fgRefs;
+   static RAMIndex *fgIndex;
 
 public:
    RAMRecord() : v_flag(0), v_refid(-1), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
                  v_refnext(-1), v_pnext(0), v_tlen(0), v_lseq(0), v_nopt(0),
-                 v_lseq2(0), v_seq(nullptr), v_qual(nullptr), v_opt(nullptr) { }
+                 v_lseq2(0), v_seq(nullptr), v_qual(nullptr), v_opt(nullptr) {
+                    if (!fgRefs)  fgRefs  = new RAMRefs;
+                    if (!fgIndex) fgIndex = new RAMIndex;
+                 }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
    virtual ~RAMRecord() { delete [] v_cigar; v_cigar = nullptr;
@@ -96,13 +136,20 @@ public:
 
    void        Print(Option_t *option="") const;
    
-   static TTree *GetTree(TFile *file, const char *treeName = "RAM");
-   static void WriteRefMap();
-   static void ReadRefMap();
-   static void PrintRefMap();
+   static TTree    *GetTree(TFile *file, const char *treeName = "RAM");
+
+   static RAMRefs  *GetRefs() { return fgRefs; }
+   static void      WriteRefs();
+   static void      ReadRefs();
+
+   static RAMIndex *GetIndex() { return fgIndex; }
+   static void      WriteIndex();
+   static void      ReadIndex();
 
    ClassDef(RAMRecord,1)
 };
+
+
 
 // Return values of GetCIGAROP()
 const UChar_t RAM_CIGAR_M     = 0;
@@ -236,22 +283,22 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
 
 inline void RAMRecord::SetREFID(const char *rname)
 {
-   v_refid = GetRefId(rname);
+   v_refid = fgRefs->GetRefId(rname);
 }
 
 inline void RAMRecord::SetREFNEXT(const char *rnext)
 {
-   v_refnext = GetRefId(rnext);
+   v_refnext = fgRefs->GetRefId(rnext);
 }
 
 inline const char *RAMRecord::GetRNAME() const
 {
-   return GetRefName(v_refid);
+   return fgRefs->GetRefName(v_refid);
 }
 
 inline const char *RAMRecord::GetRNEXT() const
 {
-   return GetRefName(v_refnext, true);
+   return fgRefs->GetRefName(v_refnext, true);
 }
 
 
@@ -505,7 +552,7 @@ inline void RAMRecord::SetOPT(const char *opt)
 
    if (v_nopt >= maxopt) {
       // TODO: resize array
-      Error("SetOPT", "please increase maxopt, currently %d", maxopt);
+      Error("SetOPT", "please increase maxopt to, at least, %d, currently %d", v_nopt, maxopt);
       return;
    }
 
@@ -541,6 +588,8 @@ inline void RAMRecord::Print(Option_t *) const
 
 #ifdef __ROOTCLING__
 #pragma link C++ class RAMRecord+;
+#pragma link C++ class RAMRefs+;
+#pragma link C++ class RAMIndex+;
 #endif
 
 #endif

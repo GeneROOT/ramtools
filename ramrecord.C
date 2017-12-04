@@ -1,39 +1,107 @@
 #include "ramrecord.h"
 
-// statics
-RAMRecord::RefMap *RAMRecord::fgRefMap = 0;
-int                RAMRecord::fgNextId = 0;
-int                RAMRecord::fgLastId = 0;
-std::string        RAMRecord::fgLastName;
+RAMRefs  *RAMRecord::fgRefs  = 0;
+RAMIndex *RAMRecord::fgIndex = 0;
 
 
-int RAMRecord::GetRefId(const char *rname, bool check_sort)
+TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
+{
+   if (!file) {
+      ::Error("RAMRecord::GetTree", "file was not opened");
+      return 0;
+   }
+   TTree *t = (TTree *) file->Get(treeName);
+   ReadRefs();
+   ReadIndex();
+   return t;
+}
+
+void RAMRecord::WriteRefs()
+{
+   if (gFile) {
+      if (fgRefs)
+         gFile->WriteObjectAny(fgRefs, "RAMRefs", "Refs");
+   } else
+      ::Error("RAMRecord::WriteRefs", "no file open");
+}
+
+void RAMRecord::ReadRefs()
+{
+   if (gFile) {
+      auto refs = (RAMRefs*) gFile->Get("Refs");
+      if (fgRefs && refs->Size() > 0) {
+         delete fgRefs;
+         fgRefs = refs;
+      }
+   } else
+      ::Error("RAMRecord::ReadRefs", "no file open");
+}
+
+void RAMRecord::WriteIndex()
+{
+   if (gFile) {
+      if (fgIndex)
+         gFile->WriteObjectAny(fgIndex, "RAMIndex", "Index");
+   } else
+      ::Error("RAMRecord::WriteIndex", "no file open");
+}
+
+void RAMRecord::ReadIndex()
+{
+   if (gFile) {
+      auto index = (RAMIndex*) gFile->Get("Index");
+      if (fgIndex && index->Size() > 0) {
+         delete fgIndex;
+         fgIndex = index;
+      }
+   } else
+      ::Error("RAMRecord::ReadIndex", "no file open");
+}
+
+
+RAMRefs::RAMRefs()
+{
+   fLastId  = 0;
+   fMaxId   = 100;
+   fRefVec.reserve(fMaxId);
+}
+
+int RAMRefs::GetRefId(const char *rname, bool check_sort)
 {
    if (rname[0] == '*')
       return -1;
 
    if (rname[0] == '=')
-      return fgLastId;
+      return fLastId;
 
-   if (fgLastName == rname)
-      return fgLastId;
+   if (fLastName == rname)
+      return fLastId;
 
-   if (!fgRefMap)
-      fgRefMap = new RefMap;
    if (check_sort) {
-      if (fgRefMap->insert(std::make_pair(rname, fgNextId)).second == false) {
-         printf("Element with key %s not inserted because already existing\n", rname);
+      auto it = std::find(fRefVec.begin(), fRefVec.end(), rname);
+      if (it != fRefVec.end()) {
+         printf("rname %s already inserted, file not sorted\n", rname);
+         auto index = std::distance(fRefVec.begin(), it);
+         fLastId = (int) index;
+         fLastName = rname;
+         return fLastId;
       }
-   } else
-      (*fgRefMap)[rname] = fgNextId;
-   fgLastId = fgNextId;
-   fgLastName = rname;
-   fgNextId++;
+   }   
 
-   return fgLastId;
+   if (fLastId+1 >= fMaxId) {
+      fMaxId *= 2;
+      fRefVec.reserve(fMaxId);
+   }
+
+   fRefVec.push_back(rname);
+
+   fLastId   = fRefVec.size()-1;
+   fLastName = rname;
+
+   return fLastId;
 }
 
-const char *RAMRecord::GetRefName(int rid, bool next)
+const char *RAMRefs::GetRefName(int rid, bool next)
 {
    // When next is true, then we're called for RNEXT and return "="
    // in case rid is same as previous.
@@ -50,54 +118,58 @@ const char *RAMRecord::GetRefName(int rid, bool next)
          return lastname.c_str();
    }
 
-   std::map<std::string,int>::iterator it = fgRefMap->begin();
-   while (it != fgRefMap->end()) {
-      if (it->second == rid) {
-         lastid = rid;
-         lastname = it->first;
-         return lastname.c_str();
-      }
-      it++;
+   if (rid >= (int) fRefVec.size())
+      return "";
+
+   lastname = fRefVec[rid];
+   lastid   = rid;
+   return lastname.c_str();
+}
+
+void RAMRefs::Print() const
+{
+   int size = fRefVec.size();
+   printf("RAMRefs vector:\n");
+   for (int i = 0; i < size; i++)
+      printf("%d: %s\n", i, fRefVec[i].c_str());
+}
+
+
+void RAMIndex::AddItem(int refid, int pos, Long64_t row)
+{
+   Key_t key = std::make_pair(refid, pos);
+   fIndex[key] = row;
+}
+
+Long64_t RAMIndex::GetRow(int refid, int pos)
+{
+   Index_t::iterator low;
+   Key_t key = std::make_pair(refid, pos);
+   low = fIndex.lower_bound(key);
+
+   if (low == fIndex.end()) {
+      return -1;   // nothing found
+   } else if (low == fIndex.begin()) {
+       std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
+       return low->second;
+   } else {
+      if ((low->first.first == refid) && (low->first.second == pos)) {
+         std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
+         return low->second;
+      } else {
+         --low;
+         std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
+         return low->second;
+      }         
    }
-   return "";
 }
 
-TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
+void RAMIndex::Print() const
 {
-   if (!file) {
-      ::Error("RAMRecord::GetTree", "file was not opened");
-      return 0;
-   }
-   TTree *t = (TTree *) file->Get(treeName);
-   RAMRecord::ReadRefMap();
-   return t;
-}
-
-void RAMRecord::WriteRefMap()
-{
-   if (gFile)
-      gFile->WriteObjectAny(fgRefMap, "RAMRecord::RefMap", "fgRefMap");
-   else
-      ::Error("RAMRecord::WriteRefMap", "no file open");
-}
-
-void RAMRecord::ReadRefMap()
-{
-   if (gFile) {
-      if (!fgRefMap)
-         fgRefMap = (RefMap*) gFile->Get("fgRefMap");
-   } else
-      ::Error("RAMRecord::ReadRefMap", "no file open");
-}
-
-void RAMRecord::PrintRefMap()
-{
-   if (!fgRefMap)
-      RAMRecord::ReadRefMap();
-
-   RefMap::iterator it = fgRefMap->begin();
-   while (it != fgRefMap->end()) {
-      printf("%s: %d\n", it->first.c_str(), it->second);
-      it++;
+   Index_t::const_iterator it = fIndex.begin();
+   printf("RAMIndex map:\n");
+   while (it != fIndex.end()) {
+      printf("%lld: refid=%d, pos=%d\n", it->second, it->first.first, it->first.second);
+      ++it;
    }
 }
