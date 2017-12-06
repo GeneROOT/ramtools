@@ -77,7 +77,6 @@ int RAMRefs::GetRefId(const char *rname)
 
    auto it = std::find(fRefVec.begin(), fRefVec.end(), rname);
    if (it != fRefVec.end()) {
-      printf("rname %s already inserted, file not sorted\n", rname);
       auto index = std::distance(fRefVec.begin(), it);
       fLastId = (int) index;
       fLastName = rname;
