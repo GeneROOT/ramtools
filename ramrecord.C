@@ -12,8 +12,7 @@ TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
       return 0;
    }
    TTree *t = (TTree *) file->Get(treeName);
-   ReadRnameRefs();
-   ReadRnextRefs();
+   ReadAllRefs();
    ReadIndex();
    return t;
 }

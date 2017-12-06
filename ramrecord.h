@@ -89,6 +89,10 @@ private:
 
    static void      WriteRefs(const RAMRefs *refs, const char *name);
    static void      ReadRefs(RAMRefs *&refs, const char *name);
+   static void      WriteRnameRefs() { WriteRefs(fgRnameRefs, "RnameRefs"); }
+   static void      WriteRnextRefs() { WriteRefs(fgRnextRefs, "RnextRefs"); }
+   static void      ReadRnameRefs()  { ReadRefs(fgRnameRefs, "RnameRefs"); }
+   static void      ReadRnextRefs()  { ReadRefs(fgRnextRefs, "RnextRefs"); }
 
 public:
    RAMRecord() : v_flag(0), v_refid(-1), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
@@ -145,10 +149,8 @@ public:
 
    static RAMRefs  *GetRnameRefs() { return fgRnameRefs; }
    static RAMRefs  *GetRnextRefs() { return fgRnextRefs; }
-   static void      WriteRnameRefs() { WriteRefs(fgRnameRefs, "RnameRefs"); }
-   static void      WriteRnextRefs() { WriteRefs(fgRnextRefs, "RnextRefs"); }
-   static void      ReadRnameRefs()  { ReadRefs(fgRnameRefs, "RnameRefs"); }
-   static void      ReadRnextRefs()  { ReadRefs(fgRnextRefs, "RnextRefs"); }
+   static void      WriteAllRefs() { WriteRnameRefs(); WriteRnextRefs(); }
+   static void      ReadAllRefs()  { ReadRnameRefs(); ReadRnextRefs(); }
 
    static RAMIndex *GetIndex() { return fgIndex; }
    static void      WriteIndex();
