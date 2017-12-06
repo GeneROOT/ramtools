@@ -17,7 +17,8 @@
 #include "ramrecord.C"
 
 
-void samtoram(const char *datafile = "samexample.sam", const char *treefile = "ramexample.root",
+void samtoram(const char *datafile = "samexample.sam",
+              const char *treefile = "ramexample.root",
               bool index = true, bool split = true, bool cache = true,
               Int_t compression_algorithm = ROOT::kLZMA,
               UInt_t quality_policy = RAMRecord::kPhred33)
