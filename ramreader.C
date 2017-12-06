@@ -60,6 +60,10 @@ void ramreader(const char *file = "ramexample.root")
    printf("\nFull print of copied last RAMRecord:\n");
    r2.Print();
 
-   printf("\nPrint RefMap:\n");
-   RAMRecord::PrintRefMap();
+   printf("\nPrint RnameRefs:\n");
+   RAMRecord::GetRnameRefs()->Print();
+   printf("\nPrint RnextRefs:\n");
+   RAMRecord::GetRnextRefs()->Print();
+   printf("\nPrint Index:\n");
+   RAMRecord::GetIndex()->Print();
 }
