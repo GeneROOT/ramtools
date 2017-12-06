@@ -154,8 +154,10 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
    tree->Write();
 
    // Write Refs
-   RAMRecord::GetRefs()->Print();
-   RAMRecord::WriteRefs();
+   RAMRecord::GetRnameRefs()->Print();
+   RAMRecord::GetRnextRefs()->Print();
+   RAMRecord::WriteRnameRefs();
+   RAMRecord::WriteRnextRefs();
    
    if (index) {
       RAMRecord::GetIndex()->Print();
