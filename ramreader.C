@@ -13,6 +13,10 @@
 void ramreader(const char *file = "ramexample.root")
 {
    auto f = TFile::Open(file);
+   if (!f) {
+      printf("ramreader: failed to open file %s\n", file);
+      return;
+   }
    auto t = RAMRecord::GetTree(f);
 
    RAMRecord *r = 0;
