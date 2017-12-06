@@ -26,8 +26,8 @@ public:
    RAMRefs();
    ~RAMRefs() { }
 
-   int         GetRefId(const char *rname, bool check_sort = false);
-   const char *GetRefName(int rid, bool next = false);
+   int         GetRefId(const char *rname);
+   const char *GetRefName(int rid);
 
    void    Print() const;
    ULong_t Size() const { return fRefVec.size(); }
@@ -83,15 +83,20 @@ private:
    Int_t           v_nopt;           // Number of optional fields
    TString        *v_opt;            //[v_nopt] Optional fields
    
-   static RAMRefs  *fgRefs;
+   static RAMRefs  *fgRnameRefs;
+   static RAMRefs  *fgRnextRefs;
    static RAMIndex *fgIndex;
+
+   static void      WriteRefs(const RAMRefs *refs, const char *name);
+   static void      ReadRefs(RAMRefs *&refs, const char *name);
 
 public:
    RAMRecord() : v_flag(0), v_refid(-1), v_pos(0), v_mapq(0), v_ncigar_op(0), v_cigar(nullptr),
                  v_refnext(-1), v_pnext(0), v_tlen(0), v_lseq(0), v_nopt(0),
                  v_lseq2(0), v_seq(nullptr), v_qual(nullptr), v_opt(nullptr) {
-                    if (!fgRefs)  fgRefs  = new RAMRefs;
-                    if (!fgIndex) fgIndex = new RAMIndex;
+                    if (!fgRnameRefs) fgRnameRefs = new RAMRefs;
+                    if (!fgRnextRefs) fgRnextRefs = new RAMRefs;
+                    if (!fgIndex)     fgIndex     = new RAMIndex;
                  }
    RAMRecord(const RAMRecord &rec);
    RAMRecord &operator=(const RAMRecord &rhs);
@@ -138,9 +143,12 @@ public:
    
    static TTree    *GetTree(TFile *file, const char *treeName = "RAM");
 
-   static RAMRefs  *GetRefs() { return fgRefs; }
-   static void      WriteRefs();
-   static void      ReadRefs();
+   static RAMRefs  *GetRnameRefs() { return fgRnameRefs; }
+   static RAMRefs  *GetRnextRefs() { return fgRnextRefs; }
+   static void      WriteRnameRefs() { WriteRefs(fgRnameRefs, "RnameRefs"); }
+   static void      WriteRnextRefs() { WriteRefs(fgRnextRefs, "RnextRefs"); }
+   static void      ReadRnameRefs()  { ReadRefs(fgRnameRefs, "RnameRefs"); }
+   static void      ReadRnextRefs()  { ReadRefs(fgRnextRefs, "RnextRefs"); }
 
    static RAMIndex *GetIndex() { return fgIndex; }
    static void      WriteIndex();
@@ -283,22 +291,22 @@ inline RAMRecord &RAMRecord::operator=(const RAMRecord &rhs)
 
 inline void RAMRecord::SetREFID(const char *rname)
 {
-   v_refid = fgRefs->GetRefId(rname);
+   v_refid = fgRnameRefs->GetRefId(rname);
 }
 
 inline void RAMRecord::SetREFNEXT(const char *rnext)
 {
-   v_refnext = fgRefs->GetRefId(rnext);
+   v_refnext = fgRnextRefs->GetRefId(rnext);
 }
 
 inline const char *RAMRecord::GetRNAME() const
 {
-   return fgRefs->GetRefName(v_refid);
+   return fgRnameRefs->GetRefName(v_refid);
 }
 
 inline const char *RAMRecord::GetRNEXT() const
 {
-   return fgRefs->GetRefName(v_refnext, true);
+   return fgRnextRefs->GetRefName(v_refnext);
 }
 
 

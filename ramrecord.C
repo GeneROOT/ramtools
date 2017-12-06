@@ -1,7 +1,8 @@
 #include "ramrecord.h"
 
-RAMRefs  *RAMRecord::fgRefs  = 0;
-RAMIndex *RAMRecord::fgIndex = 0;
+RAMRefs  *RAMRecord::fgRnameRefs = 0;
+RAMRefs  *RAMRecord::fgRnextRefs = 0;
+RAMIndex *RAMRecord::fgIndex     = 0;
 
 
 TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
@@ -11,28 +12,28 @@ TTree *RAMRecord::GetTree(TFile *file, const char *treeName)
       return 0;
    }
    TTree *t = (TTree *) file->Get(treeName);
-   ReadRefs();
+   ReadRnameRefs();
+   ReadRnextRefs();
    ReadIndex();
    return t;
 }
 
-void RAMRecord::WriteRefs()
+void RAMRecord::WriteRefs(const RAMRefs *refs, const char *refname)
 {
    if (gFile) {
-      if (fgRefs)
-         gFile->WriteObjectAny(fgRefs, "RAMRefs", "Refs");
+      if (refs)
+         gFile->WriteObjectAny(refs, "RAMRefs", refname);
    } else
       ::Error("RAMRecord::WriteRefs", "no file open");
 }
 
-void RAMRecord::ReadRefs()
+void RAMRecord::ReadRefs(RAMRefs *&refs, const char *refname)
 {
    if (gFile) {
-      auto refs = (RAMRefs*) gFile->Get("Refs");
-      if (fgRefs && refs->Size() > 0) {
-         delete fgRefs;
-         fgRefs = refs;
-      }
+      auto r = (RAMRefs*) gFile->Get(refname);
+      if (refs)
+         delete refs;
+      refs = r;
    } else
       ::Error("RAMRecord::ReadRefs", "no file open");
 }
@@ -50,10 +51,9 @@ void RAMRecord::ReadIndex()
 {
    if (gFile) {
       auto index = (RAMIndex*) gFile->Get("Index");
-      if (fgIndex && index->Size() > 0) {
+      if (fgIndex)
          delete fgIndex;
-         fgIndex = index;
-      }
+      fgIndex = index;
    } else
       ::Error("RAMRecord::ReadIndex", "no file open");
 }
@@ -66,27 +66,24 @@ RAMRefs::RAMRefs()
    fRefVec.reserve(fMaxId);
 }
 
-int RAMRefs::GetRefId(const char *rname, bool check_sort)
+int RAMRefs::GetRefId(const char *rname)
 {
+   // Convert name to a refid.
+
    if (rname[0] == '*')
       return -1;
-
-   if (rname[0] == '=')
-      return fLastId;
 
    if (fLastName == rname)
       return fLastId;
 
-   if (check_sort) {
-      auto it = std::find(fRefVec.begin(), fRefVec.end(), rname);
-      if (it != fRefVec.end()) {
-         printf("rname %s already inserted, file not sorted\n", rname);
-         auto index = std::distance(fRefVec.begin(), it);
-         fLastId = (int) index;
-         fLastName = rname;
-         return fLastId;
-      }
-   }   
+   auto it = std::find(fRefVec.begin(), fRefVec.end(), rname);
+   if (it != fRefVec.end()) {
+      printf("rname %s already inserted, file not sorted\n", rname);
+      auto index = std::distance(fRefVec.begin(), it);
+      fLastId = (int) index;
+      fLastName = rname;
+      return fLastId;
+   }
 
    if (fLastId+1 >= fMaxId) {
       fMaxId *= 2;
@@ -101,29 +98,14 @@ int RAMRefs::GetRefId(const char *rname, bool check_sort)
    return fLastId;
 }
 
-const char *RAMRefs::GetRefName(int rid, bool next)
+const char *RAMRefs::GetRefName(int rid)
 {
-   // When next is true, then we're called for RNEXT and return "="
-   // in case rid is same as previous.
+   // Convert refid to name.
 
    if (rid == -1)
       return "*";
 
-   static int lastid = -1;
-   static string lastname;
-   if (lastid > -1 && rid == lastid && next) {
-      if (next)
-         return "=";
-      else
-         return lastname.c_str();
-   }
-
-   if (rid >= (int) fRefVec.size())
-      return "";
-
-   lastname = fRefVec[rid];
-   lastid   = rid;
-   return lastname.c_str();
+   return fRefVec[rid].c_str();
 }
 
 void RAMRefs::Print() const
