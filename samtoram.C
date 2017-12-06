@@ -53,7 +53,7 @@ void samtoram(const char *datafile = "samexample.sam", const char *treefile = "r
       splitlevel = 99;
 
    tree->Branch("RAMRecord.", &r, 64000, splitlevel);
-   tree->SetMaxTreeSize(500000000000LL);  // Defautlt is 100GB, change to 500GB
+   tree->SetMaxTreeSize(500000000000LL);  // Default is 100GB, change to 500GB
 
    if (!cache)
       tree->SetCacheSize(0);
