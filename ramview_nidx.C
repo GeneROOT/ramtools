@@ -1,7 +1,7 @@
 //
 // View a region of a RAM file.
 //
-// Author: Jose Javier Gonzalez Ortiz, 5/7/2017
+// Author: Fons Rademakers, 7/12/2017
 //
 
 #include <iostream>
@@ -87,15 +87,16 @@ void ramview_nidx(const char *file, const char *query, bool cache = true, bool p
       t->SetBranchStatus("RAMRecord.*", 1);
 
    Long64_t j;
-   for (j = start_entry; j <= end_entry; j++) {
+   for (j = start_entry; j < end_entry; j++) {
       t->GetEntry(j);
       r->Print();
    }
 
-   t->GetEntry(j++);
-   while (r->GetPOS() <= range_end) {
-      t->GetEntry(j++);
+   t->GetEntry(j);
+   while (r->GetPOS() < range_end) {
       r->Print();
+      j++;
+      t->GetEntry(j);
    }
 
    stopwatch.Print();
