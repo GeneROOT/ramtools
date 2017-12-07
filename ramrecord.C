@@ -130,15 +130,12 @@ Long64_t RAMIndex::GetRow(int refid, int pos)
    if (low == fIndex.end()) {
       return -1;   // nothing found
    } else if (low == fIndex.begin()) {
-       std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
        return low->second;
    } else {
       if ((low->first.first == refid) && (low->first.second == pos)) {
-         std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
          return low->second;
       } else {
          --low;
-         std::cout << "low=(" << low->first.first << "," << low->first.second << ")\n";
          return low->second;
       }         
    }
