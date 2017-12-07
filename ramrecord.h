@@ -38,8 +38,8 @@ public:
 
 class RAMIndex {
 private:
-   typedef std::pair<int,int> Key_t;      // refid (of rname) and pos
-   typedef std::map<Key_t,Long64_t> Index_t;
+   typedef std::pair<int,int> Key_t;          // refid (of rname) and pos
+   typedef std::map<Key_t,Long64_t> Index_t;  // map of Key_t and TTree entry number
    
    Index_t fIndex;
 
