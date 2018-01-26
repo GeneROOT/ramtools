@@ -91,11 +91,15 @@ void ramview(const char *file, const char *query, bool cache = true, bool perfst
    for (j = start_entry; j < end_entry; j++) {
       t->GetEntry(j);
 //      r->Print();
+//      Add optimized printing here. Like in samview where they print
+//      using sprintf and write per 4096 bytes to stdout.
    }
 
    t->GetEntry(j);
    while (r->GetPOS() < range_end) {
 //      r->Print();
+//      Add optimized printing here. Like in samview where they print
+//      using sprintf and write per 4096 bytes to stdout.
       j++;
       t->GetEntry(j);
    }
