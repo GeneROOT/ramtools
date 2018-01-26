@@ -1,22 +1,26 @@
 //
 // View a region of a RAM file.
 //
-// Author: Jose Javier Gonzalez Ortiz, 5/7/2017
+// Author: Fons Rademakers, 7/12/2017
 //
 
 #include <iostream>
-#include <string>
+#include <cstring>
 
 #include <TBranch.h>
 #include <TTree.h>
 #include <TFile.h>
 #include <TStopwatch.h>
+#include <TString.h>
+#include <TTreeIndex.h>
 #include <TTreePerfStats.h>
+
+#include "utils.h"
 
 #include "ramrecord.C"
 
 
-void ramview(const char *file, const char *query, bool cache = false, bool perfstats = false,
+void ramview(const char *file, const char *query, bool cache = true, bool perfstats = false,
              const char *perfstatsfilename = "perf.root")
 {
    TStopwatch stopwatch;
@@ -24,102 +28,76 @@ void ramview(const char *file, const char *query, bool cache = false, bool perfs
 
    // Open the file and load tree and reader
    auto f = TFile::Open(file);
+   if (!f) {
+      printf("ramview: failed to open file %s\n", file);
+      return;
+   }
    auto t = RAMRecord::GetTree(f);
 
    RAMRecord *r = 0;
 
-   if (!cache) {
+   if (!cache)
       t->SetCacheSize(0);
-   }
 
    TTreePerfStats *ps = 0;
-
-   if (perfstats) {
+   if (perfstats)
       ps = new TTreePerfStats("ioperf", t);
-   }
 
    t->SetBranchAddress("RAMRecord.", &r);
 
    TBranch *b = t->GetBranch("RAMRecord.");
 
-   // Parse queried region string
+   // Parse queried region string (rname:pos1-pos2): chr1:5000-6000
    std::string region = query;
    int chrDelimiterPos = region.find(":");
    TString rname = region.substr(0, chrDelimiterPos);
 
    int rangeDelimiterPos = region.find("-");
 
-   UInt_t rangeStart = std::stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
-   UInt_t rangeEnd = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
+   Int_t range_start = std::stoi(region.substr(chrDelimiterPos + 1, rangeDelimiterPos - chrDelimiterPos));
+   Int_t range_end = std::stoi(region.substr(rangeDelimiterPos + 1, region.size() - rangeDelimiterPos));
 
-   // Default values to ensure correctness
-   int rnameStart = -1;
-   int posStart = -1;
+   // Convert rname to refid
+   auto refid = RAMRecord::GetRnameRefs()->GetRefId(rname);
 
-   // Assume RNAME are chunked together
-   // We look only at the RNAME column
-   // We can only do this when there are columns
-   if (b->GetSplitLevel() > 0) {
+   // Find starting row in index
+   auto start_entry = RAMRecord::GetIndex()->GetRow(refid, range_start);
+   auto end_entry   = RAMRecord::GetIndex()->GetRow(refid, range_end);
+
+   printf("ramview: %s:%d (%lld) - %d (%lld)\n", rname.Data(), range_start, start_entry,
+                                                 range_end, end_entry);
+
+   if (b->GetSplitLevel() > 0)
       t->SetBranchStatus("RAMRecord.*", 0);
-      t->SetBranchStatus("RAMRecord.v_rname", 1);
+
+   if (b->GetSplitLevel() > 0) {
+      t->SetBranchStatus("RAMRecord.v_refid", 1);
+      t->SetBranchStatus("RAMRecord.v_pos", 1);
+      t->SetBranchStatus("RAMRecord.v_lseq", 1);
    }
 
-   for (int i = 0; i < t->GetEntries(); i++) {
-      t->GetEntry(i);
-      if (rname.EqualTo(r->GetRNAME())) {
-         rnameStart = i;
+   for (; start_entry < end_entry; start_entry++) {
+      t->GetEntry(start_entry);
+      if (r->GetPOS() + r->GetSEQLEN() > range_start) {
+         // First valid position for printing
          break;
       }
    }
 
-   // If the RNAME was found
-   if (rnameStart >= 0) {
+   if (b->GetSplitLevel() > 0)
+      t->SetBranchStatus("RAMRecord.*", 1);
 
-      // We need to look both at the leftmost position (v_pos)
-      // as well as the length of sequence (v_lseq)
-      if (b->GetSplitLevel() > 0) {
-         t->SetBranchStatus("RAMRecord.v_pos", 1);
-         t->SetBranchStatus("RAMRecord.v_lseq", 1);
-      }
+   Long64_t j;
+   for (j = start_entry; j < end_entry; j++) {
+      t->GetEntry(j);
+//      r->Print();
+   }
 
-      for (int i = rnameStart; i < t->GetEntries(); i++) {
-         t->GetEntry(i);
-
-         // If the RNAME region ends
-         if (!rname.EqualTo(r->GetRNAME())) {
-            break;
-         } else {
-            if (r->GetPOS() + r->GetSEQLEN() > rangeStart) {
-               // Register first valid position for printing
-               posStart = i;
-               break;
-            }
-         }
-      }
-
-      // If the position was found
-      if (posStart >= 0) {
-
-         // Enable all fields for printing
-         if (b->GetSplitLevel() > 0) {
-            t->SetBranchStatus("RAMRecord.*", 1);
-         }
-         for (int i = posStart; i < t->GetEntries(); i++) {
-            t->GetEntry(i);
-
-            // If the RNAME region ends
-            if (!rname.EqualTo(r->GetRNAME())) {
-               break;
-            } else {
-               // Within the region
-               if (r->GetPOS() <= rangeEnd) {
-                  r->Print();
-               } else {
-                  break;
-               }
-            }
-         }
-      }
+   t->GetEntry(j);
+   while (r->GetPOS() < range_end) {
+//      r->Print();
+      j++;
+      t->GetEntry(j);
    }
 
    stopwatch.Print();
@@ -127,6 +105,5 @@ void ramview(const char *file, const char *query, bool cache = false, bool perfs
    if (perfstats) {
       ps->SaveAs(perfstatsfilename);
       delete ps;
-      printf("Reading %lld bytes in %d transactions\n", f->GetBytesRead(), f->GetReadCalls());
    }
 }
