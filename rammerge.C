@@ -12,6 +12,10 @@
 
 void rammerge(const char *outfile, const char *infile1, const char *infile2)
 {
+
+   printf("*** Needs to be fixed to use new index mechanism. ***\n");
+   return;
+
    TList *list = new TList;
 
    auto *in1 = TFile::Open(infile1);
