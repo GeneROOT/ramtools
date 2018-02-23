@@ -144,6 +144,7 @@ void samtoram(const char *datafile = "samexample.sam",
 
       if (!header) {
          tree->Fill();
+         // Add index every 1000 records (this can be tuned)
          if (index && nrecords % 1000 == 0)
             RAMRecord::GetIndex()->AddItem(r->GetREFID(), r->GetPOS(), nrecords);         
          nrecords++;
@@ -160,7 +161,7 @@ void samtoram(const char *datafile = "samexample.sam",
    RAMRecord::WriteAllRefs();
    
    if (index) {
-      RAMRecord::GetIndex()->Print();
+      //RAMRecord::GetIndex()->Print();
       RAMRecord::WriteIndex();
    }
 
