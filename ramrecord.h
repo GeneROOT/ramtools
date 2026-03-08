@@ -7,7 +7,14 @@
 
 #ifndef RAMRecord_h
 #define RAMRecord_h
+#include <vector>
+#include <map>
+#include <string>
+#include <utility>
+#include <cstring>
 
+#include <TTree.h>
+#include <TFile.h>
 #include <TObject.h>
 #include <TString.h>
 #include <TError.h>
